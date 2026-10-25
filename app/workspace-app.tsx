@@ -1829,7 +1829,8 @@ export default function Home() {
           <span className="identity-subtitle">Innovation OS</span>
         </div>
         <nav>
-          {nav.filter(item => item.id !== "superadmin" || siteBlogEditor).map(({ id, label, icon: I }) => (
+          {nav.map(({ id, label, icon: I }) => (
+            id === "superadmin" && !siteBlogEditor ? null :
             <Fragment key={id}>
               <button
                 className={view === id ? "active" : ""}
