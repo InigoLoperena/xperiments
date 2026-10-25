@@ -151,11 +151,11 @@ test("TXT metadata and Storage MIME are enabled, while new videos are forbidden 
   await db.query("insert into public.record_attachments(id,record_id,workspace_id,kind,storage_path,mime_type,size) values($1,$2,$3,'video',$4,'video/mp4',200)",
    [legacy,p,w,`${w}/${p}/${legacy}.mp4`]);
   await db.exec(await readFile(new URL("../supabase/migrations/20261025124500_record_upload_types.sql",import.meta.url),"utf8"));
-  assert.equal((await db.query("select count(*)::int as n from public.record_attachments where kind='video'")).rows[0].n,1);
+  assert.equal((await db.query<{n:number}>("select count(*)::int as n from public.record_attachments where kind='video'")).rows[0].n,1);
   const txt=randomUUID();
   await db.query("insert into public.record_attachments(id,record_id,workspace_id,kind,storage_path,mime_type,size) values($1,$2,$3,'txt',$4,'text/plain',200)",
    [txt,p,w,`${w}/${p}/${txt}.txt`]);
-  assert.equal((await db.query("select kind from public.record_attachments where id=$1",[txt])).rows[0].kind,"txt");
+  assert.equal((await db.query<{kind:string}>("select kind from public.record_attachments where id=$1",[txt])).rows[0].kind,"txt");
   const denied=randomUUID();
   await assert.rejects(
    db.query("insert into public.record_attachments(id,record_id,workspace_id,kind,storage_path,mime_type,size) values($1,$2,$3,'video',$4,'video/mp4',200)",
