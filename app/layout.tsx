@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/public-site";
 import "./globals.css";
+import "./blog/blog.css";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "Xperiments · Experimentación de negocio con IA",
