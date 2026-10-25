@@ -65,8 +65,11 @@ test('multimodal payload is bounded and cannot fetch arbitrary URLs',()=>{
   const image={name:'foto.jpg',kind:'image',data:'data:image/jpeg;base64,/9j/AAAA',timestamp:null};
   assert.equal(validateAiMedia([image]).length,1);
   for(const value of [[{...image,data:'https://internal.example'}],[{...image,data:'data:image/svg+xml;base64,PHN2Zz4='}],Array(9).fill(image),[{...image,timestamp:181}],[{...image,data:'data:image/jpeg;base64,'+'A'.repeat(270000)}]])assert.throws(()=>validateAiMedia(value));
-  assert.equal(attachmentFileType({name:'creative.mp4',type:'video/mp4',size:100}).kind,'video');
-  assert.throws(()=>attachmentFileType({name:'creative.mp4',type:'text/html',size:100}));
+  // Record attachments are documents and images only; legacy video previews
+  // remain readable, but no newly uploaded MP4/WebM can enter a ficha.
+  assert.equal(attachmentFileType({name:'creative.txt',type:'text/plain',size:100}).kind,'txt');
+  assert.throws(()=>attachmentFileType({name:'creative.mp4',type:'video/mp4',size:100}),/No se admiten vídeos/);
+  assert.throws(()=>attachmentFileType({name:'creative.webm',type:'video/webm',size:100}),/No se admiten vídeos/);
 });
 
 test('bare campaign domains work with image proposals while malformed destinations remain rejected',()=>{
