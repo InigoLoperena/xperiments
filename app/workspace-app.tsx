@@ -29,6 +29,7 @@ import {
   Microscope,
   UserRound,
   Plug,
+  ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { experimentFields, experimentEditorFields, experimentSections, normalizeExperiment } from "@/lib/experiments";
@@ -37,6 +38,7 @@ import { MvpExperimentation } from "./mvp-experimentation";
 import { MvpHierarchy } from "./mvp-hierarchy";
 import { ProblemonSection } from "./problemon-section";
 import { EditorDictation } from "./editor-dictation";
+import { SiteAdminBlog } from "./site-admin-blog";
 import { recordAssignmentVisible } from "@/lib/ui-features";
 import { getProblemon, isProblemon } from "@/lib/problemon";
 import { demoItems, demoMembers, demoActivity } from "@/lib/demo";
@@ -295,6 +297,7 @@ const nav: { id: View; label: string; icon: typeof Compass | typeof AIBrainIcon 
   { id: "team", label: "Equipo", icon: Users },
   { id: "integrations", label: "Integraciones", icon: Plug },
   { id: "method", label: "Cómo utilizar Xperiments", icon: CircleHelp },
+  { id: "superadmin", label: "Superadministrador", icon: ShieldCheck },
 ];
 const viewLabels: Partial<Record<View, string>> = {
  problemon:"Problema principal", mvp_problemon:"Problema principal",
@@ -325,6 +328,7 @@ const sectionHeadings: Record<View,{icon:typeof Compass | typeof AIBrainIcon;col
  team:{icon:Users,color:"var(--blue-text)"},
  integrations:{icon:Plug,color:"var(--blue-text)"},
  method:{icon:CircleHelp,color:"var(--blue-text)"},
+ superadmin:{icon:ShieldCheck,color:"var(--blue-text)"},
 };
 const mvpViews = ["mvp", "mvp_problemon", "mvp_problems", "mvp_main_hypothesis", "mvp_hypotheses", "mvp_experiments", "mvp_research"] as const;
 const mvpSubsections = [
@@ -491,6 +495,17 @@ export default function Home() {
   const [assistantBusy, setAssistantBusy] = useState(false);
   const [draftFiles,setDraftFiles]=useState<File[]>([]);
   const [demo, setDemo] = useState(!supabase);
+  const [blogAdminGrant, setBlogAdminGrant] = useState<{userId:string;allowed:boolean}|null>(null);
+  useEffect(() => {
+    let active = true;
+    setBlogAdminGrant(null);
+    if (!supabase || !user || demo) return;
+    // Site-wide editorial access is independent of workspace 'owner' roles.
+    void supabase.rpc('is_blog_editor').then(({ data, error }) => {
+      if (active) setBlogAdminGrant({userId:user.id,allowed:!error && data===true});
+    });
+    return () => { active = false; };
+  }, [user?.id, demo]);
   const [loading, setLoading] = useState(!!supabase);
   const [toast, setToast] = useState("");
   const [filter, setFilter] = useState("");
@@ -568,6 +583,8 @@ export default function Home() {
       ? "owner"
       : members.find((m) => m.user_id === user?.id)?.role;
   const editable = role === "owner" || role === "editor";
+  const siteBlogEditor = !demo && !publicMode && !!user
+    && blogAdminGrant?.userId === user.id && blogAdminGrant.allowed;
   const currentMember=members.find(m=>m.user_id===user?.id);
   const can=(kind:Kind,action:RecordAction)=>!publicMode&&(demo?editable:canRecord(currentMember,kind,action));
   const createKind=availableKinds.find(kind=>can(kind,'create'));
@@ -1813,6 +1830,7 @@ export default function Home() {
         </div>
         <nav>
           {nav.map(({ id, label, icon: I }) => (
+            id === "superadmin" && !siteBlogEditor ? null :
             <Fragment key={id}>
               <button
                 className={view === id ? "active" : ""}
@@ -2740,6 +2758,11 @@ export default function Home() {
             </>
           )}
           {view === "method" && <Method />}
+          {view === "superadmin" && (
+            siteBlogEditor
+              ? <SiteAdminBlog />
+              : <div className="panel" role="alert">Acceso reservado al superadministrador del sitio.</div>
+          )}
           {view === 'ai' && <StrategicAI key={`${workspace.id}:${user?.id||'demo'}`} workspace={workspace} project={currentProject} disabled={demo||publicMode} canImport={can('learning','create')} canEdit={can('learning','edit')} canDelete={can('learning','delete')} canCreate={can('experiment','create')} onProposal={openAIProposal}/>}
           {view === 'integrations' && publicMode && (
             <div className="panel"><button className="btn primary" onClick={() => requestAuth("signup")}>Crear mi espacio gratis</button></div>

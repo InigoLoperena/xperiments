@@ -11,7 +11,7 @@ export const sectionPaths = {
  ai: '/ia', map: '/goi-tree', problemon: '/goi-tree/problemon', goals: '/goi-tree/objetivos',
  input_metrics: '/goi-tree/input-metrics', opportunities: '/goi-tree/oportunidades',
  ideas: '/goi-tree/hipotesis', team: '/equipo',
- integrations: '/integraciones', method: '/como-utilizar',
+ integrations: '/integraciones', method: '/como-utilizar', superadmin: '/superadministrador',
 } as const;
 export type SectionView = keyof typeof sectionPaths;
 

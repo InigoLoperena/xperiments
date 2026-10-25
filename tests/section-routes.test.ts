@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {pathForView,sectionPaths,viewForPath} from '../lib/section-routes';
-test('all 20 sections have distinct, refreshable direct URLs',()=>{
- const urls=Object.values(sectionPaths);assert.equal(urls.length,20);
+test('all 21 sections have distinct, refreshable direct URLs',()=>{
+ const urls=Object.values(sectionPaths);assert.equal(urls.length,21);
  assert.equal(new Set(urls).size,urls.length);
  for(const [view,url] of Object.entries(sectionPaths)){
   assert.equal(viewForPath(url),view);
@@ -27,4 +27,10 @@ test('MVP subsection deep links round-trip without replacing the existing GOI Tr
  assert.equal(sectionPaths.experiments,'/goi-tree/experimentos');
  assert.equal(viewForPath('/experimentos'),'experiments');
  assert.equal(viewForPath('/experimentos'),'experiments');
+});
+
+test('superadministrator has a refreshable URL independent from the public blog editor',()=>{
+ assert.equal(pathForView('superadmin'),'/superadministrador');
+ assert.equal(viewForPath('/superadministrador'),'superadmin');
+ assert.equal(viewForPath('/blog/administrar'),null);
 });
