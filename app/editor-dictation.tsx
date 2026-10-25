@@ -12,25 +12,37 @@ const valid=(element:EventTarget|null):element is TextField=>{
 };
 
 export function EditorDictation(){
+ const control=useRef<HTMLDivElement|null>(null);
  const lastField=useRef<TextField|null>(null);
  const recognition=useRef<Recognition|null>(null);
  const [recording,setRecording]=useState(false);
- const [selected,setSelected]=useState(false);
+ const [selected,setSelected]=useState(true);
  const [error,setError]=useState('');
  useEffect(()=>{
+  const form=control.current?.closest('form');
+  if(!form){setSelected(false);return;}
+  const title=form.querySelector('[data-record-title]');
+  if(valid(title)){lastField.current=title;}else{setSelected(false);}
   const remember=(event:Event)=>{
-   if(valid(event.target)&&(event.target as Element).closest('dialog.edit-dialog')){
+   if(valid(event.target)&&form.contains(event.target)){
     lastField.current=event.target;setSelected(true);
    }
   };
-  document.addEventListener('focusin',remember,true);
-  document.addEventListener('pointerdown',remember,true);
-  return()=>{document.removeEventListener('focusin',remember,true);document.removeEventListener('pointerdown',remember,true);recognition.current?.stop();recognition.current=null;};
+  form.addEventListener('focusin',remember,true);
+  form.addEventListener('pointerdown',remember,true);
+  return()=>{
+   form.removeEventListener('focusin',remember,true);form.removeEventListener('pointerdown',remember,true);
+   const voice=recognition.current;recognition.current=null;lastField.current=null;
+   if(voice){voice.onresult=null;voice.onerror=null;voice.onend=null;try{voice.stop();}catch{}}
+  };
  },[]);
  function toggle(){
   if(recognition.current){recognition.current.stop();return;}
-  const field=lastField.current;
-  if(!field||!field.isConnected||field.disabled||field.readOnly){setSelected(false);setError('Selecciona primero un campo de texto.');return;}
+  const form=control.current?.closest('form');
+  const previous=lastField.current;
+  const field=valid(previous)&&previous.isConnected&&form?.contains(previous)?previous:form?.querySelector('[data-record-title]')??null;
+  if(!valid(field)){setSelected(false);setError('Selecciona un campo de texto editable.');return;}
+  lastField.current=field;setSelected(true);
   const browser=window as SpeechWindow;
   const Constructor=browser.SpeechRecognition||browser.webkitSpeechRecognition;
   if(!Constructor){setError('El navegador no admite dictado por voz.');return;}
@@ -38,8 +50,9 @@ export function EditorDictation(){
   const voice=new Constructor();
   voice.lang='es-ES';voice.continuous=true;voice.interimResults=false;
   voice.onresult=event=>{
+   if(recognition.current!==voice)return;
    const target=lastField.current;
-   if(!target||!target.isConnected||target.disabled||target.readOnly)return;
+   if(!target||!target.isConnected||target.disabled||target.readOnly||!form?.contains(target))return;
    const spoken=Array.from(event.results).slice(event.resultIndex).map(result=>result[0]?.transcript||'').join(' ').trim();
    if(!spoken)return;
    const begin=target.selectionStart??target.value.length;
@@ -61,9 +74,9 @@ export function EditorDictation(){
   recognition.current=voice;setRecording(true);
   try{voice.start();}catch{end();setError('No se pudo iniciar el micrófono.');}
  }
- return <div className="editor-dictation-control">
+ return <div ref={control} className="editor-dictation-control">
   <button type="button" className={'btn editor-dictation-trigger'+(recording?' recording':'')} onClick={toggle}
-   disabled={!recording&&!selected} title={!selected?'Haz clic primero en el campo donde quieres dictar':recording?'Detener dictado':'Dictar en el último campo seleccionado'}
+   disabled={!recording&&!selected} title={!selected?'No hay un campo de texto editable':recording?'Detener dictado':'Dictar en Título o en el último campo seleccionado'}
    aria-label={recording?'Detener dictado':'Dictar texto'}>
    {recording?<Square size={18}/>:<Mic size={20}/>} {recording?'Detener dictado':'Dictar texto'}
   </button>

@@ -26,6 +26,7 @@ const fixtureRecords = () => [
   mk('77777777-7777-4777-8777-777777777777', 'experiment', 'Experimento QA', { context: 'Contexto propio', hypothesis: 'Hipótesis propia', metric: 'Clics', channel: 'meta_ads', impact: 5, confidence: 5, ease: 5 }, '66666666-6666-4666-8666-666666666666'),
   mk('88888888-8888-4888-8888-888888888888', 'research', 'Investigación QA', { description: 'Notas de entrevista', method: 'Entrevistas', findings: 'Hallazgo sintético' }),
   mk('99999999-9999-4999-8999-999999999999', 'experiment', 'Solo otro proyecto', { metric: 'Visitas' }, null, otherProjectId),
+  mk('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'opportunity', 'Problema privado de otro proyecto', { is_problemon: true }, null, otherProjectId),
 ];
 let records = fixtureRecords();
 let writes = 0;
@@ -73,9 +74,10 @@ const fixtureRoute = async route => {
 };
 await context.route('**/*', fixtureRoute);
 await page.addInitScript(() => {
+  window.qaDictationStarts = 0;
   window.SpeechRecognition = class {
-    start() { window.qaDictation = this; }
-    stop() { this.onend?.(); }
+    start() { window.qaDictation = this; window.qaDictationStarts++; }
+    stop() { this.stopped = true; this.onend?.(); }
   };
 });
 
@@ -84,6 +86,20 @@ async function navigate(path) {
   assert.equal(response.status(), 200, path);
   await page.locator('.app-shell').waitFor();
   await page.locator('main').waitFor();
+}
+async function checkDefaultTitleDictation(editor, title) {
+  const field = editor.getByRole('textbox', { name: 'Título', exact: true });
+  await field.waitFor();
+  assert.equal(await editor.getByRole('textbox', { name: 'Nombre', exact: true }).count(), 0);
+  const button = editor.getByRole('button', { name: 'Dictar texto', exact: true });
+  assert.equal(await button.isEnabled(), true, 'Dictation must be available before selecting a field');
+  assert.equal(await editor.getByRole('button', { name: 'Detener dictado', exact: true }).count(), 0);
+  assert.equal(await page.evaluate(() => window.qaDictationStarts), 0, 'Opening a form must not start recording');
+  await button.click();
+  await page.evaluate(text => window.qaDictation.onresult({ resultIndex: 0, results: [[{ transcript: text }]] }), title);
+  await editor.getByRole('button', { name: 'Detener dictado', exact: true }).click();
+  assert.ok((await field.inputValue()).includes(title), 'Initial dictation must update Title');
+  await page.evaluate(() => { window.qaDictationStarts = 0; });
 }
 try {
   await navigate('/experimentacion-mvps/hipotesis-principal');
@@ -97,6 +113,8 @@ try {
   await navigate('/experimentacion-mvps/hipotesis-principal');
   await page.getByRole('button', { name: 'Editar Hipótesis QA', exact: true }).click();
   const hypothesisEditor = page.locator('dialog.edit-dialog[open]');
+  await checkDefaultTitleDictation(hypothesisEditor, 'Título dictado de hipótesis');
+  await hypothesisEditor.getByRole('textbox', { name: 'Título', exact: true }).fill('Hipótesis QA');
   assert.equal(await hypothesisEditor.getByRole('combobox', { name: 'Responsable', exact: true }).count(), 0);
   await hypothesisEditor.locator('textarea').first().fill('Hipótesis revisada sin reasignación');
   await hypothesisEditor.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
@@ -106,6 +124,8 @@ try {
   await navigate('/experimentacion-mvps/experimentos');
   await page.getByRole('button', { name: 'Editar Experimento QA', exact: true }).click();
   const assignedEditor = page.locator('dialog.edit-dialog[open]');
+  await checkDefaultTitleDictation(assignedEditor, 'Título dictado de experimento');
+  await assignedEditor.getByRole('textbox', { name: 'Título', exact: true }).fill('Experimento QA');
   assert.equal(await assignedEditor.getByRole('combobox', { name: 'Responsable', exact: true }).count(), 0);
   await assignedEditor.getByRole('textbox', { name: 'Contexto', exact: true }).fill('Contexto revisado sin reasignación');
   await assignedEditor.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
@@ -122,9 +142,10 @@ try {
   checks.push('Experiment ancestors expand with project-scoped shared IDs');
   await page.getByRole('button', { name: 'Añadir experimento', exact: true }).first().click();
   const editor = page.locator('dialog.edit-dialog[open]');
+  await checkDefaultTitleDictation(editor, 'Experimento nuevo QA');
   assert.equal(await editor.getByRole('combobox', { name: 'Responsable', exact: true }).count(), 0);
   const firstSections = await editor.locator('.form-body').evaluate(body => Array.from(body.children).filter(element => element.matches('label, .experiment-form-ice')).slice(0,3).map(element => element.textContent.trim()));
-  assert.equal(firstSections[0], 'Nombre');
+  assert.equal(firstSections[0], 'Título');
   assert.ok(firstSections[1].startsWith('ICE'));
   assert.ok(firstSections[2].startsWith('Hipótesis padre'));
   assert.equal(await editor.getByRole('heading', { name: 'ICE', exact: true }).count(), 1);
@@ -140,8 +161,8 @@ try {
     await editor.getByText('Preparar con IA', { exact: true }).waitFor();
   }
   await channelSelect.selectOption('');
-  checks.push('Experiment editor has only the requested fields, with ICE immediately after Name');
-  await editor.getByRole('textbox', { name: 'Nombre', exact: true }).fill('Experimento nuevo QA');
+  checks.push('Experiment editor has only the requested fields, with ICE immediately after Title');
+  await editor.getByRole('textbox', { name: 'Título', exact: true }).fill('Experimento nuevo QA');
   await editor.getByRole('textbox', { name: 'Contexto', exact: true }).fill('Contexto escrito por una persona');
   await editor.getByRole('textbox', { name: 'Descripción', exact: true }).fill('Descripción de la prueba');
   await editor.getByRole('textbox', { name: 'Target', exact: true }).fill('Personas de prueba');
@@ -170,8 +191,10 @@ try {
   assert.equal(edited.parent_id, '66666666-6666-4666-8666-666666666666');
   checks.push('Editing ICE preserves experiment content and its shared hypothesis parent');
   await detail.getByRole('button', { name: 'Documentar aprendizaje', exact: true }).click();
+  await page.evaluate(() => { window.qaDictationStarts = 0; });
+  await checkDefaultTitleDictation(editor, 'Aprendizaje nuevo QA');
   assert.equal(await editor.getByRole('combobox', { name: 'Responsable', exact: true }).count(), 0);
-  await editor.getByRole('textbox', { name: 'Nombre', exact: true }).fill('Aprendizaje nuevo QA');
+  await editor.getByRole('textbox', { name: 'Título', exact: true }).fill('Aprendizaje nuevo QA');
   await editor.getByRole('textbox', { name: 'Qué aprendimos', exact: true }).fill('Conclusión pendiente de revisión');
   await editor.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
   await editor.waitFor({ state: 'hidden' });
@@ -179,13 +202,43 @@ try {
   checks.push('Documenting a learning preserves its experiment association');
   await navigate('/experimentacion-mvps/investigacion');
   await page.getByRole('button', { name: 'Añadir investigación', exact: true }).first().click();
+  await checkDefaultTitleDictation(editor, 'Investigación nueva QA');
   assert.equal(await editor.getByRole('combobox', { name: 'Responsable', exact: true }).count(), 0);
-  await editor.getByRole('textbox', { name: 'Nombre', exact: true }).fill('Investigación nueva QA');
+  await editor.getByRole('textbox', { name: 'Título', exact: true }).fill('Investigación nueva QA');
   await editor.getByRole('textbox', { name: 'Hallazgos', exact: true }).fill('Hallazgo de entrevista');
+  const links = editor.getByRole('group', { name: 'Vincular a problemas e hipótesis (puedes elegir varios)', exact: true });
+  await links.getByRole('checkbox', { name: 'Problema principal: Problema QA', exact: true }).check();
+  await links.getByRole('checkbox', { name: 'Hipótesis principal: Hipótesis QA', exact: true }).check();
+  assert.equal(await links.getByText('Problema privado de otro proyecto', { exact: false }).count(), 0);
+  await editor.screenshot({ path: fileURLToPath(new URL('research-principal-links.png', output)) });
   await editor.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
   await editor.waitFor({ state: 'hidden' });
   assert.ok(records.some(r => r.title === 'Investigación nueva QA' && r.fields.findings === 'Hallazgo de entrevista'));
+  assert.deepEqual(records.find(r => r.title === 'Investigación nueva QA').fields.mvp_links.split(',').sort(), ['55555555-5555-4555-8555-555555555555', '66666666-6666-4666-8666-666666666666']);
+  checks.push('Principal problem and hypothesis labels retain multiple links and exclude other projects');
   checks.push('Create research saves findings without cloning a hypothesis or experiment');
+  await page.locator('dialog.detail-dialog[open]').getByRole('button', { name: 'Editar ficha', exact: true }).click();
+  await checkDefaultTitleDictation(editor, 'Texto de prueba');
+  assert.equal(await links.getByRole('checkbox', { name: 'Problema principal: Problema QA', exact: true }).isChecked(), true);
+  assert.equal(await links.getByRole('checkbox', { name: 'Hipótesis principal: Hipótesis QA', exact: true }).isChecked(), true);
+  await editor.getByRole('button', { name: 'Dictar texto', exact: true }).click();
+  await page.evaluate(() => { window.qaStaleDictation = window.qaDictation; window.qaStaleCallback = window.qaDictation.onresult; });
+  await editor.getByRole('button', { name: 'Cerrar formulario', exact: true }).click();
+  await editor.waitFor({ state: 'hidden' });
+  assert.deepEqual(await page.evaluate(() => ({ stopped: window.qaStaleDictation.stopped, onresult: window.qaStaleDictation.onresult, onend: window.qaStaleDictation.onend, onerror: window.qaStaleDictation.onerror })), { stopped: true, onresult: null, onend: null, onerror: null });
+  await page.getByRole('button', { name: 'Investigación nueva QA', exact: true }).click();
+  await page.locator('dialog.detail-dialog[open]').getByRole('button', { name: 'Editar ficha', exact: true }).click();
+  await page.evaluate(() => window.qaStaleCallback({ resultIndex: 0, results: [[{ transcript: 'No debe escribirse' }]] }));
+  assert.equal(await editor.getByRole('textbox', { name: 'Título', exact: true }).inputValue(), 'Investigación nueva QA');
+  await editor.getByRole('button', { name: 'Cerrar formulario', exact: true }).click();
+  checks.push('Title dictation works on create/edit and closing a form stops recording and ignores late results');
+  for (const path of ['/proyectos', '/goi-tree/objetivos', '/goi-tree/oportunidades']) {
+    await navigate(path);
+    await page.getByRole('button', { name: 'Crear', exact: true }).click();
+    await checkDefaultTitleDictation(editor, 'Título dictado de prueba');
+    await editor.getByRole('button', { name: 'Cerrar formulario', exact: true }).click();
+    checks.push(`Default Title dictation in ${path}`);
+  }
   await page.setViewportSize({ width: 390, height: 844 });
   for (const path of ['/proyectos', '/experimentacion-mvps/hipotesis', '/experimentacion-mvps/experimentos', '/goi-tree', '/ia', '/integraciones']) {
     await navigate(path);

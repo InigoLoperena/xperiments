@@ -41,7 +41,7 @@ export const experimentSections = {
   additional: [],
 };
 
-// El nombre y el responsable se guardan en title y owner_id, respectivamente.
+// El título y el responsable se guardan en title y owner_id, respectivamente.
 export function cleanExperimentFields(fields: Fields): Fields {
   return Object.fromEntries(
     [...experimentFields.map(({key})=>key),...legacyKeys,'channel','execution_config']

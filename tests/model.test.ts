@@ -41,7 +41,7 @@ test("standalone experiments save without removed launch or completion fields", 
   assert.match(
     validate({ kind: "experiment", title: " ", parent_id: null, fields: {} }) ||
       "",
-    /nombre/,
+    /título/,
   );
   // A former child may be orphaned after its parent is deleted.
   assert.equal(

@@ -2366,7 +2366,7 @@ export default function Home() {
                   <Search size={17} />
                   <input
                     aria-label="Buscar experimentos"
-                    placeholder={recordAssignmentVisible ? "Buscar por nombre, responsable, hipótesis o etiquetas…" : "Buscar por nombre, hipótesis o etiquetas…"}
+                    placeholder={recordAssignmentVisible ? "Buscar por título, responsable, hipótesis o etiquetas…" : "Buscar por título, hipótesis o etiquetas…"}
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                   />
@@ -2961,7 +2961,7 @@ export default function Home() {
                   <div className="record-relation"><span>Hijo de</span>{parentTag(draft)}</div>
                 )}
               </div>
-              <EditorDictation/>
+              <EditorDictation key={draft.id}/>
               <button
                 type="button"
                 className="icon-button"
@@ -2975,8 +2975,11 @@ export default function Home() {
             <div className="form-body">
               <p className="small full" role="note">Los textos nuevos quedan vacíos. La IA solo rellena una ficha cuando le pides una propuesta y pulsas expresamente «Rellenar formulario para revisar».</p>
               <label className="full">
-                Nombre
+                Título
                 <input
+                  data-record-title
+                  name="title"
+                  autoFocus
                   required
                   value={draft.title}
                   onChange={(e) =>
@@ -3088,7 +3091,7 @@ export default function Home() {
                         const links=e.target.checked ? [...selectedLinks,item.id] : selectedLinks.filter(id=>id!==item.id);
                         setDraft({...draft,fields:{...draft.fields,mvp_links:links.join(",")}});
                       }}/>
-                      {kinds[item.kind]}: {item.title}
+                      {isProblemon(item)?"Problema principal":item.kind==="hypothesis"&&item.fields.is_main_hypothesis===true?"Hipótesis principal":kinds[item.kind]}: {item.title}
                     </label>;
                   })}
                   {!items.some(item => item.kind === "opportunity" || item.kind === "hypothesis") && <p>Crea primero un problema o una hipótesis para poder vincular esta investigación.</p>}

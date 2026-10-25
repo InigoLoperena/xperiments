@@ -94,7 +94,7 @@ export function progress(f: Fields) {
 export function validate(
   item: Pick<Item, "kind" | "title" | "parent_id" | "fields">,
 ): string | null {
-  if (!item.title.trim()) return "Escribe un nombre.";
+  if (!item.title.trim()) return "Escribe un título.";
   if(item.kind==='experiment')try{parseChannel(item.fields.channel);executionFromFields(item.fields);}catch(error){return error instanceof Error?error.message:'Revisa la configuración del experimento.';}
   if (
     !["experiment", "learning", "goal", "opportunity", "idea", "kr", "hypothesis"].includes(item.kind) &&
