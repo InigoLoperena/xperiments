@@ -1,36 +1,48 @@
 'use client';
-import {useEffect} from 'react';
-import {createRoot, type Root} from 'react-dom/client';
-import {Mic} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { Mic, Square } from 'lucide-react';
+import { startTwoMinuteDictation, type DictationEngine, type DictationSession } from '@/lib/continuous-dictation';
 
 type SpeechResult={resultIndex:number;results:ArrayLike<ArrayLike<{transcript:string}>>};
-type Recognition={lang:string;continuous:boolean;interimResults:boolean;onresult:((e:SpeechResult)=>void)|null;onerror:(()=>void)|null;onend:(()=>void)|null;start:()=>void;stop:()=>void};
+type Recognition=DictationEngine&{lang:string;continuous:boolean;interimResults:boolean;onresult:((e:SpeechResult)=>void)|null};
 type SpeechWindow=Window&{SpeechRecognition?:new()=>Recognition;webkitSpeechRecognition?:new()=>Recognition};
+
 function DictationButton({target}:{target:HTMLInputElement|HTMLTextAreaElement}){
- useEffect(()=>{},[]);
- return <button type="button" className="global-dictation-button" aria-label="Dictar texto" title="Dictar texto" onClick={event=>{
-  const button=event.currentTarget;
-  const W=window as SpeechWindow;const Constructor=W.SpeechRecognition||W.webkitSpeechRecognition;
-  if(!Constructor){button.title='El dictado necesita un navegador compatible';return;}
-  const active=(button as HTMLButtonElement & {recognition?:Recognition}).recognition;
-  if(active){active.stop();return;}
-  const recognition=new Constructor();recognition.lang='es-ES';recognition.continuous=true;recognition.interimResults=false;
-  (button as HTMLButtonElement & {recognition?:Recognition}).recognition=recognition;
-  button.classList.add('is-recording');button.setAttribute('aria-label','Detener dictado');button.title='Detener dictado';
-  const reset=()=>{(button as HTMLButtonElement & {recognition?:Recognition}).recognition=undefined;button.classList.remove('is-recording');button.setAttribute('aria-label','Dictar texto');button.title='Dictar texto';};
-  recognition.onend=reset;recognition.onerror=reset;
-  recognition.onresult=e=>{if(!target.isConnected||target.disabled||target.readOnly)return;
-   const transcript=Array.from(e.results).slice(e.resultIndex).map(result=>result[0]?.transcript||'').join(' ').trim();
-   if(!transcript)return;
-   const proto=target instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
-   const setter=Object.getOwnPropertyDescriptor(proto,'value')?.set;
-   const next=(target.value.trim()?target.value.trimEnd()+' ':'')+transcript;
+ const session=useRef<DictationSession|null>(null);
+ const [recording,setRecording]=useState(false);
+ const [message,setMessage]=useState('');
+ useEffect(()=>()=>{session.current?.stop();session.current=null;},[]);
+ function toggle(){
+  if(session.current){session.current.stop();return;}
+  const browser=window as SpeechWindow;
+  const Constructor=browser.SpeechRecognition||browser.webkitSpeechRecognition;
+  if(!Constructor){setMessage('El dictado necesita un navegador compatible');return;}
+  const voice=new Constructor();voice.lang='es-ES';voice.continuous=true;voice.interimResults=false;
+  voice.onresult=e=>{
+   if(!target.isConnected||target.disabled||target.readOnly)return;
+   const spoken=Array.from(e.results).slice(e.resultIndex).map(result=>result[0]?.transcript||'').join(' ').trim();
+   if(!spoken)return;
+   const next=(target.value.trim()?target.value.trimEnd()+' ':'')+spoken;
    if(target.maxLength>=0&&next.length>target.maxLength)return;
-   setter?.call(target,next);target.dispatchEvent(new Event('input',{bubbles:true}));
+   const proto=target instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
+   Object.getOwnPropertyDescriptor(proto,'value')?.set?.call(target,next);
+   target.dispatchEvent(new Event('input',{bubbles:true}));
   };
-  try{recognition.start();}catch{reset();}
- }}><Mic size={16}/></button>;
+  setMessage('');
+  try{
+   session.current=startTwoMinuteDictation(voice,
+    reason=>{session.current=null;setRecording(false);if(reason==='timeout')setMessage('Dictado finalizado tras 2 minutos');},
+    message=>setMessage(message));
+   setRecording(true);
+  }catch{setMessage('No se pudo iniciar el micrófono.');setRecording(false);}
+ }
+ return <button type="button" className={'global-dictation-button'+(recording?' is-recording':'')}
+  aria-label={recording?'Detener dictado':'Dictar texto'}
+  title={message|| (recording?'Detener dictado (máximo 2 minutos)':'Dictar texto hasta 2 minutos')}
+  onClick={toggle}>{recording?<Square size={16}/>:<Mic size={16}/>}</button>;
 }
+
 /** Adds dictation to editable text fields, including dialogs mounted after initial load. */
 export function GlobalDictation(){
  useEffect(()=>{

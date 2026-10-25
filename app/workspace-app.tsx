@@ -71,6 +71,7 @@ import { registerAccount } from "@/lib/auth-service";
 import { attachmentBucket, attachmentFileType, supportsAttachments, type Attachment } from "@/lib/attachments";
 import { cleanupAttachments } from "@/lib/attachment-service";
 import { clickedOutsideDialog } from "@/lib/dialog-backdrop";
+import { saveRecordDraft, restoreRecordDraft, clearRecordDraft } from "@/lib/record-drafts";
 import {
   ancestors,
   goalParent,
@@ -500,6 +501,16 @@ export default function Home() {
   const [draft, setDraft] = useState<Item | null>(null);
   const [mvpEditor, setMvpEditor] = useState(false);
   useEffect(()=>setDraftFiles([]),[draft?.id]);
+  // Preserve new record forms locally until the record is successfully saved.
+  useEffect(() => {
+    if (draft && !allItems.some(item => item.id === draft.id))
+      saveRecordDraft(draft, user?.id);
+  }, [draft, allItems, user?.id]);
+  function closeRecordEditor() {
+    if (draft && !allItems.some(item => item.id === draft.id))
+      saveRecordDraft(draft, user?.id);
+    setDraft(null);
+  }
   const [selectedHistory, setSelectedHistory] = useState<Activity[]>([]);
   const [recordComments, setRecordComments] = useState<RecordComment[]>([]);
   const [demoComments, setDemoComments] = useState<Record<string, RecordComment[]>>({});
@@ -1012,7 +1023,7 @@ export default function Home() {
     // Never inherit free-text fields from parent records automatically.
     // A linked parent defines the relationship, not consent to copy its text.
     // Only typed input or a user-requested, explicitly applied AI proposal may fill it.
-    setDraft({
+    const freshDraft: Item = {
       id: crypto.randomUUID(),
       workspace_id: workspace.id,
       project_id: kind === "project" ? null : currentProject!.id,
@@ -1045,7 +1056,8 @@ export default function Home() {
       updated_at: new Date().toISOString(),
       created_by: user?.id || null,
       updated_by: user?.id || null,
-    });
+    };
+    setDraft(restoreRecordDraft(freshDraft, user?.id) || freshDraft);
   }
   function createMvp(kind: Kind, parent: string | null = null) {
     setMvpEditor(kind !== "experiment");
@@ -1097,12 +1109,13 @@ export default function Home() {
   function openAIProposal(proposal:Preparation){
     if(!workspace||!currentProject||!can('experiment','create')||(!demo&&!schemaReady))return;
     setError('');setDraftFiles([]);navigateView('experiments');
-    setDraft({id:crypto.randomUUID(),workspace_id:workspace.id,project_id:currentProject.id,kind:'experiment',parent_id:null,related_id:null,title:proposal.title,owner_id:user?.id||null,
-      fields:{impact:5,confidence:5,ease:5,...applyPreparation({},proposal)},created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:user?.id||null,updated_by:user?.id||null});
+    const freshDraft:Item={id:crypto.randomUUID(),workspace_id:workspace.id,project_id:currentProject.id,kind:'experiment',parent_id:null,related_id:null,title:proposal.title,owner_id:user?.id||null,
+      fields:{impact:5,confidence:5,ease:5,...applyPreparation({},proposal)},created_at:new Date().toISOString(),updated_at:new Date().toISOString(),created_by:user?.id||null,updated_by:user?.id||null};
+    setDraft(restoreRecordDraft(freshDraft,user?.id)||freshDraft);
   }
   async function save(prepareMeta=false,prepareGoogle=false,preparePosthog=false) {
     if (!draft || saving || attachmentsBusy || assistantBusy) return;
-    if(!can(draft.kind,allItems.some(i=>i.id===draft.id)?'edit':'create')){setError('No tienes permiso para guardar esta ficha.');return;}
+    if(!can(draft.kind,allItems.some(i=>i.id===draft.id)?'edit':'create')){setError('No tienes permiso para guardar este registro.');return;}
     if (!demo && !schemaReady) {
       setError(
         "Completa primero la actualización de Supabase indicada en el repositorio.",
@@ -1187,6 +1200,7 @@ export default function Home() {
         setProjectId(record.id);
         navigateView("map");
       }
+      clearRecordDraft(draft, user?.id);
       setDraft(null);
       if (supportsAttachments(record.kind)) setSelected(record);
       tell("Guardado en esta sesión de demostración");
@@ -1239,6 +1253,7 @@ export default function Home() {
         setProjectId(record.id);
         navigateView("map");
       }
+      clearRecordDraft(draft, user?.id);
       setDraft(null);
       tell("Cambios guardados");
       await load();
@@ -2928,7 +2943,7 @@ export default function Home() {
         className="edit-dialog"
         aria-labelledby="record-editor-title"
         onCancel={e => {
-          if (saving || attachmentsBusy || assistantBusy) e.preventDefault(); else setDraft(null);
+          if (saving || attachmentsBusy || assistantBusy) e.preventDefault(); else closeRecordEditor();
         }}
         onClick={e => {
           // Only clicks on the backdrop (not the form/padding) dismiss a draft.
@@ -2937,7 +2952,7 @@ export default function Home() {
           if (clickedOutsideDialog(
             e.target === e.currentTarget, e.clientX, e.clientY,
             e.currentTarget.getBoundingClientRect()
-          )) setDraft(null);
+          )) closeRecordEditor();
         }}
       >
         {draft && (
@@ -2965,7 +2980,7 @@ export default function Home() {
                 className="icon-button"
                 aria-label="Cerrar formulario"
                 disabled={saving || attachmentsBusy || assistantBusy}
-                onClick={() => setDraft(null)}
+                onClick={closeRecordEditor}
               >
                 <X />
               </button>
@@ -3135,12 +3150,12 @@ export default function Home() {
                 type="button"
                 className="btn"
                 disabled={saving || attachmentsBusy || assistantBusy}
-                onClick={() => setDraft(null)}
+                onClick={closeRecordEditor}
               >
-                Cancelar
+                Cerrar
               </button>
               <button type="submit" className="btn primary" disabled={saving || attachmentsBusy || assistantBusy}>
-                {saving ? "Guardando…" : "Guardar ficha"}
+                {saving ? "Guardando…" : `Guardar ${draft.kind === "goal" && draft.fields.goi_section === "input_metrics" ? "input metric" : kinds[draft.kind].toLowerCase()}`}
               </button>
               {draft.kind==='experiment'&&draft.fields.channel==='meta_ads'&&!demo&&!publicMode&&can('experiment','edit')&&<button type="submit" data-prepare-meta="true" className="btn primary" disabled={saving||attachmentsBusy||assistantBusy}>Guardar y revisar envío a Meta</button>}
               {draft.kind==='experiment'&&draft.fields.channel==='google_ads'&&!demo&&!publicMode&&can('experiment','edit')&&<button type="submit" data-prepare-google="true" className="btn primary" disabled={saving||attachmentsBusy||assistantBusy}>Enviar a Google Ads</button>}
