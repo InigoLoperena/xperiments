@@ -1,5 +1,4 @@
 'use client';
-import './blog/blog.css';
 import {BlogEditor} from './blog/administrar/editor';
 
 /** Reuse the existing secured editor inside the workspace. */
