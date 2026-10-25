@@ -13,7 +13,6 @@ test("Creating hypothesis/experiment/research/problem/goal must never inherit pa
  assert.doesNotMatch(page,/context:\s*parent\?\.fields\.description/);
  assert.doesNotMatch(page,/tags:\s*parent\?\.fields\.tags/);
  assert.match(page,/title:\s*""/);
- assert.match(page,/Los textos nuevos quedan vacíos/);
 });
 
 test("Unknown project descriptions cannot silently become invented marketing copy",async()=>{

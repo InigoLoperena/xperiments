@@ -80,6 +80,7 @@ export function EditorDictation(){
    aria-label={recording?'Detener dictado':'Dictar texto'}>
    {recording?<Square size={18}/>:<Mic size={20}/>} {recording?'Detener dictado':'Dictar texto'}
   </button>
+  <small className="editor-dictation-hint">título por defecto</small>
   {error&&<span className="editor-dictation-error" role="alert">{error}</span>}
  </div>;
 }

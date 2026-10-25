@@ -2938,6 +2938,7 @@ export default function Home() {
       <dialog
         ref={dialog}
         className="edit-dialog"
+        aria-labelledby="record-editor-title"
         onCancel={e => {
           if (saving || attachmentsBusy || assistantBusy) e.preventDefault(); else setDraft(null);
         }}
@@ -2952,11 +2953,11 @@ export default function Home() {
           >
             <div className="dialog-head">
               <div>
-                <span className="eyebrow">
-                  {allItems.some((i) => i.id === draft.id) ? "EDITAR" : "CREAR"}{" "}
-                  {draft.kind === "goal" && draft.fields.goi_section === "input_metrics" ? "INPUT METRIC" : kinds[draft.kind].toUpperCase()}
-                </span>
-                <h2 className={draft.kind === "hypothesis" ? "hypothesis-detail-title" : undefined}>{draft.kind === "hypothesis" && <Lightbulb size={22} aria-hidden="true" />}{draft.title || "Nueva ficha"}</h2>
+                <h2 id="record-editor-title" className={draft.kind === "hypothesis" ? "hypothesis-detail-title" : undefined}>
+                  {draft.kind === "hypothesis" && <Lightbulb size={22} aria-hidden="true" />}
+                  {allItems.some((i) => i.id === draft.id) ? "Editar" : "Crear"}{" "}
+                  {draft.kind === "goal" && draft.fields.goi_section === "input_metrics" ? "input metric" : kinds[draft.kind].toLowerCase()}
+                </h2>
                 {draft.parent_id && ["opportunity","hypothesis","experiment"].includes(draft.kind) && items.some(i => i.id === draft.parent_id) && (
                   <div className="record-relation"><span>Hijo de</span>{parentTag(draft)}</div>
                 )}
@@ -2973,7 +2974,6 @@ export default function Home() {
               </button>
             </div>
             <div className="form-body">
-              <p className="small full" role="note">Los textos nuevos quedan vacíos. La IA solo rellena una ficha cuando le pides una propuesta y pulsas expresamente «Rellenar formulario para revisar».</p>
               <label className="full">
                 Título
                 <input
