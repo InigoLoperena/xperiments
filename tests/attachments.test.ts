@@ -127,3 +127,44 @@ test("private attachments enforce company isolation, reader restrictions, attrib
     await assert.rejects(db.query("select * from record_attachments"));
   } finally { await db.close(); }
 });
+
+test("TXT metadata and Storage MIME are enabled, while new videos are forbidden and old videos retained", async()=>{
+ const db=new PGlite();
+ try{
+  await db.exec(`create schema auth; create schema storage; create role anon;create role authenticated;
+   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+   create table public.records(id uuid primary key,workspace_id uuid,kind text);
+   create table public.record_attachments(
+    id uuid primary key,record_id uuid,workspace_id uuid,kind text,storage_path text,
+    url text,mime_type text,size bigint,created_by uuid,created_at timestamptz,
+    constraint record_attachments_kind_check check(kind in ('image','video','pdf','docx','link')),
+    constraint record_attachments_check check(true)
+   );
+   create table storage.buckets(id text primary key,allowed_mime_types text[]);
+   insert into storage.buckets(id,allowed_mime_types) values
+   ('record-attachments',array['image/png','video/mp4','application/pdf']);`);
+  await db.exec(await readFile(new URL("../supabase/migrations/20261025020051_all_record_attachment_uploads.sql",import.meta.url),"utf8"));
+  await db.exec("create trigger attachment_identity before insert on public.record_attachments for each row execute function public.stamp_attachment()");
+  const w=randomUUID(),p=randomUUID(),author=randomUUID(),legacy=randomUUID();
+  await db.query("select set_config('request.jwt.claim.sub',$1,false)",[author]);
+  await db.query("insert into public.records(id,workspace_id,kind) values($1,$2,'hypothesis')",[p,w]);
+  await db.query("insert into public.record_attachments(id,record_id,workspace_id,kind,storage_path,mime_type,size) values($1,$2,$3,'video',$4,'video/mp4',200)",
+   [legacy,p,w,`${w}/${p}/${legacy}.mp4`]);
+  await db.exec(await readFile(new URL("../supabase/migrations/20261025124500_record_upload_types.sql",import.meta.url),"utf8"));
+  assert.equal((await db.query("select count(*)::int as n from public.record_attachments where kind='video'")).rows[0].n,1);
+  const txt=randomUUID();
+  await db.query("insert into public.record_attachments(id,record_id,workspace_id,kind,storage_path,mime_type,size) values($1,$2,$3,'txt',$4,'text/plain',200)",
+   [txt,p,w,`${w}/${p}/${txt}.txt`]);
+  assert.equal((await db.query("select kind from public.record_attachments where id=$1",[txt])).rows[0].kind,"txt");
+  const denied=randomUUID();
+  await assert.rejects(
+   db.query("insert into public.record_attachments(id,record_id,workspace_id,kind,storage_path,mime_type,size) values($1,$2,$3,'video',$4,'video/mp4',200)",
+    [denied,p,w,`${w}/${p}/${denied}.mp4`]),
+   /No se pueden subir vídeos/
+  );
+  const bucket=await db.query<{allowed_mime_types:string[]}>("select allowed_mime_types from storage.buckets where id='record-attachments'");
+  assert.ok(bucket.rows[0].allowed_mime_types.includes("text/plain"));
+  assert.ok(!bucket.rows[0].allowed_mime_types.includes("video/mp4"));
+  assert.ok(!bucket.rows[0].allowed_mime_types.includes("video/webm"));
+ } finally{await db.close();}
+});
