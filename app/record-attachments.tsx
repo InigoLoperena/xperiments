@@ -186,7 +186,7 @@ export function RecordAttachments({ record, editable, demo, prefetched = false, 
       }} />)}
     </div>
     {editable && <div className="attachment-controls">
-      <input ref={picker} className="sr-only" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.pdf,.docx" aria-label="Seleccionar archivos para la ficha" disabled={busy || loading}
+      <input ref={picker} className="sr-only" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.docx,.txt" aria-label="Seleccionar archivos para la ficha" disabled={busy || loading}
         onChange={e => { const selected = Array.from(e.target.files || []); e.target.value = ""; addFiles(selected); }} />
       <button type="button" className={"attachment-dropzone" + (dragging ? " is-dragging" : "")} aria-label="Subir archivos" disabled={busy || loading} onClick={() => picker.current?.click()}
         onDragEnter={e => { e.preventDefault(); e.stopPropagation(); dragDepth.current++; if (!busy && !loading && e.dataTransfer.types.includes("Files")) setDragging(true); }}
@@ -196,7 +196,7 @@ export function RecordAttachments({ record, editable, demo, prefetched = false, 
         <UploadCloud size={30} aria-hidden="true" />
         <strong>{dragging ? "Suelta los archivos aquí" : "Arrastra archivos aquí"}</strong>
         <span className="attachment-upload-action">Subir archivos</span>
-        <span className="small">Imágenes, vídeos MP4/WebM, PDF o DOCX · hasta 10 MB por archivo.</span>
+        <span className="small">Imágenes, PDF, DOCX o TXT · hasta 10 MB por archivo. No se admiten vídeos.</span>
       </button>
       {pendingFiles.length > 0 && <p className="small" role="status">{pendingFiles.length} {pendingFiles.length === 1 ? "archivo listo" : "archivos listos"} para guardar con la ficha.</p>}
       {busy && <p className="small" role="status">Subiendo archivos…</p>}

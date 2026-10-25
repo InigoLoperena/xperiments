@@ -70,6 +70,7 @@ import { createPersonalTeamSpace, getPublicPreview, listTeamSpaces, selectTeamSp
 import { registerAccount } from "@/lib/auth-service";
 import { attachmentBucket, attachmentFileType, supportsAttachments, type Attachment } from "@/lib/attachments";
 import { cleanupAttachments } from "@/lib/attachment-service";
+import { clickedOutsideDialog } from "@/lib/dialog-backdrop";
 import {
   ancestors,
   goalParent,
@@ -2928,6 +2929,15 @@ export default function Home() {
         aria-labelledby="record-editor-title"
         onCancel={e => {
           if (saving || attachmentsBusy || assistantBusy) e.preventDefault(); else setDraft(null);
+        }}
+        onClick={e => {
+          // Only clicks on the backdrop (not the form/padding) dismiss a draft.
+          // Never interrupt an in-progress save, upload or AI operation.
+          if (saving || attachmentsBusy || assistantBusy) return;
+          if (clickedOutsideDialog(
+            e.target === e.currentTarget, e.clientX, e.clientY,
+            e.currentTarget.getBoundingClientRect()
+          )) setDraft(null);
         }}
       >
         {draft && (
