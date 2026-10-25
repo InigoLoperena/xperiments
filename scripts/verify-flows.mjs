@@ -29,6 +29,10 @@ const fixtureRecords = () => [
   mk('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'opportunity', 'Problema privado de otro proyecto', { is_problemon: true }, null, otherProjectId),
 ];
 let records = fixtureRecords();
+let attachments = [];
+const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5N0AAAAASUVORK5CYII=', 'base64');
+const uploads = [];
+let failUpload = '';
 let writes = 0;
 const browser = await chromium.launch({ headless: true, ...(process.env.TEST_BROWSER_PATH ? { executablePath: process.env.TEST_BROWSER_PATH } : {}) });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
@@ -50,6 +54,18 @@ const fixtureRoute = async route => {
   if (!url.hostname.endsWith('.supabase.co')) { unexpected.push(url.origin); return route.abort(); }
   if (method === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': '*' } });
   if (url.pathname.startsWith('/auth/')) return json({ user });
+  if (url.pathname.startsWith('/storage/v1/object/sign/')) {
+    if (method === 'POST') return json({ signedURL: url.pathname.replace('/storage/v1', '') + '?token=synthetic' });
+    return route.fulfill({ status: 200, contentType: 'image/png', body: pixel, headers: { 'Access-Control-Allow-Origin': '*' } });
+  }
+  if (url.pathname.startsWith('/storage/v1/object/record-attachments/')) {
+    const storagePath = decodeURIComponent(url.pathname.split('/record-attachments/')[1]);
+    const attachment = attachments.find(item => item.storage_path === storagePath);
+    assert.ok(attachment && records.some(record => record.id === attachment.record_id), 'Save the record and reserve metadata before uploading its private file');
+    uploads.push(attachment.name);
+    if (attachment.name === failUpload) { failUpload = ''; return json({ statusCode: '400', error: 'SyntheticUpload', message: 'Fallo de subida simulado' }, 400); }
+    return json({ Key: 'record-attachments/' + storagePath });
+  }
   const table = url.pathname.split('/').at(-1);
   if (url.pathname.includes('/rpc/')) {
     if (table === 'get_public_preview') return json({ workspace, records, members: [], activity: [], attachments: [] });
@@ -60,12 +76,18 @@ const fixtureRoute = async route => {
     }
     return json([]);
   }
-  let rows = table === 'records' ? records : table === 'workspaces' ? [workspace] : table === 'members' ? [member] : table === 'profiles' ? [member.profiles] : [];
+  let rows = table === 'records' ? records : table === 'record_attachments' ? attachments : table === 'workspaces' ? [workspace] : table === 'members' ? [member] : table === 'profiles' ? [member.profiles] : [];
   for (const [key, value] of url.searchParams) if (value.startsWith('eq.')) rows = rows.filter(row => String(row[key]) === value.slice(3));
   if (method === 'POST' && table === 'records') {
     const body = request.postDataJSON(), payload = Array.isArray(body) ? body[0] : body;
     rows = [{ ...mk(payload.id, payload.kind, payload.title), ...payload }]; records.push(rows[0]); writes++;
   }
+  if (method === 'POST' && table === 'record_attachments') {
+    const payload = request.postDataJSON();
+    assert.ok(records.some(record => record.id === payload.record_id && record.workspace_id === payload.workspace_id));
+    rows = [{ ...payload, created_at: now, created_by: user.id }]; attachments.push(rows[0]);
+  }
+  if (method === 'DELETE' && table === 'record_attachments') attachments = attachments.filter(item => !rows.includes(item));
   if (method === 'PATCH' && table === 'records') {
     const payload = request.postDataJSON(); rows.forEach(row => Object.assign(row, payload, { updated_at: new Date().toISOString() })); writes++;
   }
@@ -239,6 +261,130 @@ try {
     await editor.getByRole('button', { name: 'Cerrar formulario', exact: true }).click();
     checks.push(`Default Title dictation in ${path}`);
   }
+  async function dropFile(section, name) {
+    const transfer = await page.evaluateHandle(({ bytes, name }) => {
+      const data = new DataTransfer(); data.items.add(new File([Uint8Array.from(bytes)], name, { type: 'image/png' })); return data;
+    }, { bytes: [...pixel], name });
+    const zone = section.getByRole('button', { name: 'Subir archivos', exact: true });
+    await page.waitForFunction(element => !element.disabled, await zone.elementHandle());
+    await zone.dispatchEvent('dragenter', { dataTransfer: transfer });
+    await page.waitForFunction(element => element.classList.contains('is-dragging'), await zone.elementHandle());
+    assert.ok((await zone.getAttribute('class')).includes('is-dragging'));
+    await zone.dispatchEvent('drop', { dataTransfer: transfer });
+    await transfer.dispose();
+  }
+  const filePanel = editor.getByRole('region', { name: 'Archivos de la ficha', exact: true });
+  const chooseFile = async name => filePanel.getByLabel('Seleccionar archivos para la ficha', { exact: true }).setInputFiles({ name, mimeType: 'image/png', buffer: pixel });
+  const createResearch = async title => {
+    await navigate('/experimentacion-mvps/investigacion');
+    await page.getByRole('button', { name: 'Añadir investigación', exact: true }).first().click();
+    await editor.getByRole('textbox', { name: 'Título', exact: true }).fill(title);
+  };
+  await createResearch('Selección cancelada');
+  const beforeCancelWrites = writes;
+  const fileChooser = page.waitForEvent('filechooser');
+  await filePanel.getByRole('button', { name: 'Subir archivos', exact: true }).click();
+  await (await fileChooser).setFiles({ name: 'cancelada.png', mimeType: 'image/png', buffer: pixel });
+  await dropFile(filePanel, 'cancelada-arrastrada.png');
+  assert.equal(await filePanel.locator('.attachment-pending').count(), 2);
+  await filePanel.getByLabel('Seleccionar archivos para la ficha', { exact: true }).setInputFiles({ name: 'rechazado.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg/>') });
+  await filePanel.getByRole('alert').filter({ hasText: 'Adjunta una imagen' }).waitFor();
+  assert.equal(await filePanel.locator('.attachment-pending').count(), 2);
+  await filePanel.getByRole('button', { name: 'Retirar cancelada.png', exact: true }).click();
+  assert.equal(await filePanel.locator('.attachment-pending').count(), 1);
+  assert.equal(uploads.length, 0); assert.equal(attachments.length, 0); assert.equal(writes, beforeCancelWrites);
+  await filePanel.locator('.attachment-image img').first().evaluate(image => image.complete ? null : new Promise(resolve => { image.onload = resolve; image.onerror = resolve; }));
+  assert.ok(await filePanel.locator('.attachment-image img').first().evaluate(image => image.naturalWidth > 0));
+  await editor.getByRole('button', { name: 'Cerrar formulario', exact: true }).click();
+  await createResearch('Archivos con reintento');
+  assert.equal(await filePanel.locator('.attachment-pending').count(), 0);
+  checks.push('Device selection and file drop preview unsaved files, without writes, and cancellation clears the next record');
+  await chooseFile('primera.png'); await dropFile(filePanel, 'reintento.png');
+  failUpload = 'reintento.png';
+  await editor.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
+  await editor.getByRole('alert').filter({ hasText: 'La ficha se guardó, pero faltan archivos' }).waitFor();
+  assert.equal(await filePanel.locator('.attachment-pending').count(), 1);
+  assert.equal(records.filter(record => record.title === 'Archivos con reintento').length, 1);
+  assert.equal(attachments.filter(item => item.name === 'primera.png').length, 1);
+  await editor.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
+  await editor.waitFor({ state: 'hidden' });
+  assert.equal(uploads.filter(name => name === 'primera.png').length, 1);
+  assert.equal(uploads.filter(name => name === 'reintento.png').length, 2);
+  const researchWithFiles = records.find(record => record.title === 'Archivos con reintento');
+  assert.equal(attachments.filter(item => item.record_id === researchWithFiles.id).length, 2);
+  checks.push('Research uploads after creation and partial failure retries only remaining files without duplicate records or uploads');
+  await page.locator('dialog.detail-dialog[open]').getByRole('button', { name: 'Editar ficha', exact: true }).click();
+  await dropFile(filePanel, 'edicion.png');
+  await filePanel.getByRole('button', { name: 'Retirar edicion.png', exact: true }).waitFor();
+  assert.equal(attachments.filter(item => item.record_id === researchWithFiles.id).length, 3);
+  await editor.getByRole('button', { name: 'Cerrar formulario', exact: true }).click();
+  checks.push('Editing an existing record accepts a direct file drop using the same private upload flow');
+  await navigate('/experimentacion-mvps/hipotesis');
+  await page.getByRole('button', { name: 'Añadir hipótesis', exact: true }).first().click();
+  await editor.getByRole('textbox', { name: 'Título', exact: true }).fill('Hipótesis con imagen');
+  await chooseFile('hipotesis.png');
+  await editor.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
+  await editor.waitFor({ state: 'hidden' });
+  assert.ok(attachments.some(item => item.name === 'hipotesis.png' && records.find(record => record.id === item.record_id)?.kind === 'hypothesis'));
+  checks.push('New hypotheses save their staged images along with the record');
+  await navigate('/experimentacion-mvps/experimentos');
+  await page.getByRole('button', { name: 'Añadir experimento', exact: true }).first().click();
+  await editor.getByRole('textbox', { name: 'Título', exact: true }).fill('Experimento con adjuntos compartidos');
+  await editor.getByRole('combobox', { name: 'Canal principal', exact: true }).selectOption('meta_ads');
+  await chooseFile('compartida.png');
+  await editor.locator('.ai-file-list').getByText('compartida.png', { exact: true }).waitFor();
+  await editor.locator('.ai-file-list').getByRole('button', { name: 'Quitar compartida.png', exact: true }).click();
+  assert.equal(await filePanel.locator('.attachment-pending').count(), 0);
+  await chooseFile('compartida.png');
+  await editor.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
+  await editor.waitFor({ state: 'hidden' });
+  assert.equal(uploads.filter(name => name === 'compartida.png').length, 1);
+  checks.push('Experiment attachments and AI materials share one selection and are saved only once');
+  for (const [path, name] of [
+    ['/experimentacion-mvps/hipotesis', 'Añadir hipótesis'],
+    ['/experimentacion-mvps/experimentos', 'Añadir experimento'],
+    ['/experimentacion-mvps/investigacion', 'Añadir investigación'],
+    ['/goi-tree/objetivos', 'Crear'],
+    ['/goi-tree/input-metrics', 'Crear'],
+    ['/aprendizajes', 'Crear'],
+    ['/proyectos', 'Crear'],
+  ]) {
+    await navigate(path);
+    const button = page.getByRole('button', { name, exact: true }).first();
+    assert.ok((await button.boundingBox()).height >= 52, `Larger creation target in ${path}`);
+    assert.ok(parseFloat(await button.evaluate(element => getComputedStyle(element).fontSize)) >= 15);
+    assert.equal(await button.locator('svg').count(), 1);
+    assert.equal(await button.locator('svg').innerHTML(), await page.locator('h1.minimal-section-title svg').innerHTML());
+    assert.equal(await button.evaluate(element => getComputedStyle(element).color), await page.locator('h1.minimal-section-title').evaluate(element => getComputedStyle(element).color));
+  }
+  checks.push('Creation controls are substantially larger and match every section color and icon');
+  await navigate('/ia');
+  const library = page.locator('details.methodology-library');
+  assert.equal(await library.locator('.methodology-cover-preview img').count(), 3);
+  assert.equal(await library.locator('.methodology-library-copy > span').count(), 2);
+  assert.ok((await library.innerText()).includes('o guiar investigaciones'));
+  assert.ok((await library.innerText()).includes('Importa información y contexto relevante de tus proyectos'));
+  const coversRect = await library.locator('.methodology-cover-preview').boundingBox();
+  const libraryLink = library.getByText('Ver libros', { exact: true });
+  const linkRect = await libraryLink.boundingBox();
+  assert.ok(linkRect.y >= coversRect.y + coversRect.height);
+  await libraryLink.click();
+  assert.equal(await library.evaluate(element => element.open), true);
+  assert.equal(await library.getByRole('link', { name: /Comprar .* en Amazon/ }).count(), 3);
+  await libraryLink.click();
+  assert.equal(await library.evaluate(element => element.open), false);
+  await library.screenshot({ path: fileURLToPath(new URL('methodology-library-link.png', output)) });
+  checks.push('The library preserves three covers, uses the requested copy, and Ver libros expands the Amazon links');
+  await navigate('/proyectos');
+  assert.equal(await page.locator('.experimental-book-banner').count(), 0);
+  await page.screenshot({ path: fileURLToPath(new URL('large-create-actions.png', output)), fullPage: true });
+  await page.getByRole('button', { name: 'Crear', exact: true }).click();
+  await editor.getByRole('textbox', { name: 'Título', exact: true }).fill('Proyecto con archivos');
+  await chooseFile('proyecto.png');
+  await editor.getByRole('button', { name: 'Guardar ficha', exact: true }).click();
+  await editor.waitFor({ state: 'hidden' });
+  assert.ok(attachments.some(item => item.name === 'proyecto.png' && records.find(record => record.id === item.record_id)?.kind === 'project'));
+  checks.push('Projects also save their files from the initial creation form');
   await page.setViewportSize({ width: 390, height: 844 });
   for (const path of ['/proyectos', '/experimentacion-mvps/hipotesis', '/experimentacion-mvps/experimentos', '/goi-tree', '/ia', '/integraciones']) {
     await navigate(path);

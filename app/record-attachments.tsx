@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { FileText, Link2, Paperclip, Trash2 } from "lucide-react";
+import { FileText, Link2, Paperclip, Trash2, UploadCloud } from "lucide-react";
 import type { Item } from "@/lib/model";
 import { attachmentFileType, attachmentLink, linkSlots, type Attachment } from "@/lib/attachments";
 import { addFileAttachment, saveLinkSlot, loadAttachments, removeAttachment, signedAttachmentUrl } from "@/lib/attachment-service";
@@ -11,7 +11,7 @@ function AttachmentPreview({ attachment, demo }: { attachment: Attachment; demo:
   const [pdf, setPdf] = useState(false);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
-    if (!attachment.storage_path || demo) return;
+    if (!attachment.storage_path || demo) { setUrl(attachment.url || attachment.preview_url || ""); return; }
     let active = true;
     const sign = async () => {
       try { const next = await signedAttachmentUrl(attachment.storage_path!); if (active) { setUrl(next); setError(""); } }
@@ -21,7 +21,7 @@ function AttachmentPreview({ attachment, demo }: { attachment: Attachment; demo:
     // Renueva el enlace mientras la ficha permanece abierta.
     const timer = window.setInterval(() => void sign(), 240000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [attachment.storage_path, demo, retry]);
+  }, [attachment.storage_path, attachment.url, attachment.preview_url, demo, retry]);
   return <>
     {attachment.kind === "image" && url && <a href={url} target="_blank" rel="noreferrer" className="attachment-image"><img src={url} alt={attachment.name} loading="lazy" /></a>}
     {attachment.kind === "video" && url && <video controls preload="metadata" src={url} aria-label={attachment.name} style={{maxWidth:'100%'}}/>}
@@ -38,10 +38,26 @@ function AttachmentPreview({ attachment, demo }: { attachment: Attachment; demo:
   </>;
 }
 
-export function RecordAttachments({ record, editable, demo, prefetched = false, values, onDemoChange, onBusy, persisted = true, children }: {
+function PendingFile({ file, disabled, onRemove }: { file: File; disabled: boolean; onRemove: () => void }) {
+  const [url, setUrl] = useState("");
+  useEffect(() => {
+    const preview = URL.createObjectURL(file); setUrl(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [file]);
+  let kind: Attachment["kind"] = "docx";
+  try { kind = attachmentFileType(file).kind; } catch { /* Validation is shown when selecting or saving. */ }
+  return <article className="attachment-card attachment-pending">
+    {url && <AttachmentPreview attachment={{ id: "pending", record_id: "", workspace_id: "", name: file.name, kind, storage_path: null, url: null, mime_type: file.type, size: file.size, preview_url: url }} demo />}
+    <p className="small">Se guardará con la ficha.</p>
+    <button type="button" className="attachment-remove" disabled={disabled} aria-label={`Retirar ${file.name}`} onClick={onRemove}><Trash2 size={14} /> Retirar</button>
+  </article>;
+}
+
+export function RecordAttachments({ record, editable, demo, prefetched = false, values, onDemoChange, onBusy, persisted = true, pendingFiles = [], onPendingFiles, children }: {
   record: Item; editable: boolean; demo: boolean; prefetched?: boolean; values: Attachment[];
   onDemoChange: (values: Attachment[]) => void; onBusy: (busy: boolean) => void;
-  persisted?: boolean; children?: (sections: { files: ReactNode; links: ReactNode }) => ReactNode;
+  persisted?: boolean; pendingFiles?: File[]; onPendingFiles?: (files: File[]) => void;
+  children?: (sections: { files: ReactNode; links: ReactNode }) => ReactNode;
 }) {
   const [attachments, setAttachments] = useState<Attachment[]>(demo || prefetched ? values : []);
   const [urls, setUrls] = useState<string[]>(() => linkSlots(demo || prefetched ? values : []).slots.map(a => a?.url || ""));
@@ -50,6 +66,12 @@ export function RecordAttachments({ record, editable, demo, prefetched = false, 
   const [loading, setLoading] = useState(!demo && !prefetched && persisted);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
+  const dragDepth = useRef(0);
+  const pendingOperation = useRef(false);
+  const pendingFilesRef = useRef(pendingFiles);
+  useEffect(() => { pendingFilesRef.current = pendingFiles; }, [pendingFiles]);
   const alive = useRef(true);
   // Reading prefetched/demo data must not restart network loading on every form keystroke.
   const valuesRef = useRef(values);
@@ -76,11 +98,33 @@ export function RecordAttachments({ record, editable, demo, prefetched = false, 
   }, [record.id, demo, prefetched, persisted, retry]);
   const update = (next: Attachment[]) => { setAttachments(next); if (demo) onDemoChange(next); };
   async function operation(action: () => Promise<void>) {
-    if (busy) return;
+    if (pendingOperation.current) return;
+    pendingOperation.current = true;
     setBusy(true); onBusy(true); setError("");
     try { await action(); }
     catch (err) { if (alive.current) setError(err instanceof Error ? err.message : "No se ha podido guardar el adjunto."); }
-    finally { if (alive.current) setBusy(false); onBusy(false); }
+    finally { pendingOperation.current = false; if (alive.current) setBusy(false); onBusy(false); }
+  }
+  function addFiles(files: File[]) {
+    if (!editable || busy || loading || !files.length) return;
+    try { for (const file of files) attachmentFileType(file); }
+    catch (err) { setError(err instanceof Error ? err.message : "No se pueden adjuntar estos archivos."); return; }
+    if (!persisted) {
+      if (!onPendingFiles) return;
+      const next = [...pendingFilesRef.current, ...files];
+      pendingFilesRef.current = next; onPendingFiles(next); setError("");
+      return;
+    }
+    void operation(async () => {
+      let next = [...attachments];
+      for (const file of files) {
+        const type = attachmentFileType(file);
+        const item = demo ? { id: crypto.randomUUID(), record_id: record.id, workspace_id: record.workspace_id,
+          name: file.name, kind: type.kind, storage_path: null, url: null, mime_type: type.mime, size: file.size, preview_url: URL.createObjectURL(file) } as Attachment
+          : await addFileAttachment(record.id, record.workspace_id, file);
+        next = [...next, item]; update(next);
+      }
+    });
   }
   const { slots, extra } = linkSlots(attachments);
   const savedUrls = JSON.stringify(slots.map(a => a?.url || ""));
@@ -130,35 +174,33 @@ export function RecordAttachments({ record, editable, demo, prefetched = false, 
   const files = <section className="record-attachments" aria-label="Archivos de la ficha">
     <h3><Paperclip size={18} /> Archivos</h3>
     {loading && <p role="status" className="small">Cargando archivos…</p>}
-    {!loading && !attachments.some(a => a.kind !== "link") && !error && <p className="small">Todavía no hay archivos.</p>}
+    {!loading && !attachments.some(a => a.kind !== "link") && !pendingFiles.length && !editable && !error && <p className="small">Todavía no hay archivos.</p>}
     <div className="attachment-grid">
       {attachments.filter(a => a.kind !== "link").map(attachment => <article className="attachment-card" key={attachment.id}>
         <AttachmentPreview attachment={attachment} demo={demo} />
         {editable && <button type="button" className="attachment-remove" disabled={busy} aria-label={`Retirar ${attachment.name}`} onClick={() => remove(attachment)}><Trash2 size={14} /> Retirar</button>}
       </article>)}
+      {pendingFiles.map((file, index) => <PendingFile key={`${index}:${file.name}:${file.size}:${file.lastModified}`} file={file} disabled={!editable || busy || loading} onRemove={() => {
+        const next = pendingFiles.filter((_, i) => i !== index);
+        pendingFilesRef.current = next; onPendingFiles?.(next);
+      }} />)}
     </div>
-    {editable && persisted && <div className="attachment-controls">
-      <p className="small">Los archivos se guardan al añadirlos. Imágenes, vídeos MP4/WebM, PDF o DOCX · hasta 10 MB por archivo.</p>
-      <label className="attachment-upload">Adjuntar archivos
-        <input type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.pdf,.docx" disabled={busy || loading}
-          onChange={e => {
-            const files = Array.from(e.target.files || []); e.target.value = "";
-            if (!files.length) return;
-            void operation(async () => {
-              for (const file of files) attachmentFileType(file);
-              let next = [...attachments];
-              for (const file of files) {
-                const item = demo ? { id: crypto.randomUUID(), record_id: record.id, workspace_id: record.workspace_id,
-                  name: file.name, kind: attachmentFileType(file).kind, storage_path: null, url: null,
-                  mime_type: attachmentFileType(file).mime, size: file.size, preview_url: URL.createObjectURL(file) } as Attachment
-                  : await addFileAttachment(record.id, record.workspace_id, file);
-                next = [...next, item]; update(next);
-              }
-            });
-          }} />
-      </label>
+    {editable && <div className="attachment-controls">
+      <input ref={picker} className="sr-only" type="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.pdf,.docx" aria-label="Seleccionar archivos para la ficha" disabled={busy || loading}
+        onChange={e => { const selected = Array.from(e.target.files || []); e.target.value = ""; addFiles(selected); }} />
+      <button type="button" className={"attachment-dropzone" + (dragging ? " is-dragging" : "")} aria-label="Subir archivos" disabled={busy || loading} onClick={() => picker.current?.click()}
+        onDragEnter={e => { e.preventDefault(); e.stopPropagation(); dragDepth.current++; if (!busy && !loading && e.dataTransfer.types.includes("Files")) setDragging(true); }}
+        onDragOver={e => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = busy || loading ? "none" : "copy"; }}
+        onDragLeave={e => { e.preventDefault(); dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragging(false); }}
+        onDrop={e => { e.preventDefault(); e.stopPropagation(); dragDepth.current = 0; setDragging(false); addFiles(Array.from(e.dataTransfer.files)); }}>
+        <UploadCloud size={30} aria-hidden="true" />
+        <strong>{dragging ? "Suelta los archivos aquí" : "Arrastra archivos aquí"}</strong>
+        <span className="attachment-upload-action">Subir archivos</span>
+        <span className="small">Imágenes, vídeos MP4/WebM, PDF o DOCX · hasta 10 MB por archivo.</span>
+      </button>
+      {pendingFiles.length > 0 && <p className="small" role="status">{pendingFiles.length} {pendingFiles.length === 1 ? "archivo listo" : "archivos listos"} para guardar con la ficha.</p>}
+      {busy && <p className="small" role="status">Subiendo archivos…</p>}
     </div>}
-    {!persisted && <p className="small">Guarda la ficha para adjuntar imágenes, vídeos, PDF o DOCX.</p>}
     {errorDisplay}
   </section>;
   return children ? children({ files, links }) : <>{links}{files}</>;

@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { score } from "@/lib/model";
 import { linkedHypothesis } from "@/lib/mvp-relationships";
-import { Flag, ChevronRight, FlaskConical, Lightbulb, Microscope, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Flag, ChevronRight, FlaskConical, Lightbulb, Microscope, Pencil, Search, Trash2 } from "lucide-react";
 import type { Item, Kind } from "@/lib/model";
 import { getMvpHierarchy, type MvpHierarchyView } from "@/lib/mvp-hierarchy";
 import { isProblemon } from "@/lib/problemon";
+import { RecordCreateButton } from "./record-create-button";
 type Props={
  view:MvpHierarchyView;project:Item;items:Item[];readOnly:boolean;treeName?:string;
  canCreate:(kind:Kind)=>boolean;canEdit:(kind:Kind)=>boolean;canDelete:(kind:Kind)=>boolean;
@@ -82,7 +83,7 @@ export function MvpHierarchy({view,project,items,readOnly,canCreate,canEdit,canD
   const next=new Set(previous);if(next.has(id))next.delete(id);else next.add(id);return next;
  });
  const add=(label:string,kind:Kind,parentId:string|null=null)=>
-  !readOnly&&canCreate(kind)&&<button type="button" className="mvp-hierarchy-add" onClick={()=>onCreate(kind,parentId)}><Plus size={14} aria-hidden="true"/>{label}</button>;
+  !readOnly&&canCreate(kind)&&<RecordCreateButton kind={kind} className="mvp-hierarchy-add" onClick={()=>onCreate(kind,parentId)}>{label}</RecordCreateButton>;
  const childActions=(item:Item)=>{
   if(item.kind==="opportunity")return <>{add("Añadir hipótesis","hypothesis",item.id)}{add("Vincular nueva investigación","research",item.id)}</>;
   if(item.kind==="hypothesis")return <>{add("Añadir experimento","experiment",item.id)}{add("Investigar esta hipótesis","research",item.id)}</>;

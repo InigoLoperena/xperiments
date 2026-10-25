@@ -546,6 +546,14 @@ nav button svg {
 .attachment-controls input[type="file"] {
   width: 100%;
 }
+.attachment-dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;min-height:185px;padding:24px 18px;border:2px dashed var(--border);border-radius:12px;background:var(--surface-raised);color:var(--ink);text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.attachment-dropzone>svg{color:var(--blue-text)}
+.attachment-dropzone>strong{font-size:17px}
+.attachment-dropzone:hover,.attachment-dropzone.is-dragging{border-color:var(--blue-text);background:rgba(138,188,255,.08)}
+.attachment-dropzone:focus-visible{outline:2px solid var(--blue-text);outline-offset:4px}
+.attachment-dropzone:disabled{opacity:.6;cursor:wait}
+.attachment-upload-action{padding:9px 16px;border:1px solid var(--blue-text);border-radius:8px;color:var(--blue-text);font-size:14px;font-weight:700}
+.attachment-pending{border-style:dashed}
 .attachment-link-fields {
   display: flex;
   flex-direction: column;
@@ -690,56 +698,6 @@ main {
   gap: 12px;
   min-width: 0;
 }
-.experimental-book-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: min(440px, 42vw);
-  padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  box-shadow: 0 2px 8px #00000018;
-}
-.experimental-book-banner img {
-  width: 46px;
-  height: 68px;
-  object-fit: cover;
-  border-radius: 3px;
-  flex: 0 0 46px;
-}
-.experimental-book-copy {
-  min-width: 0;
-}
-.experimental-book-copy p {
-  margin: 0 0 7px;
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--muted);
-}
-.experimental-book-copy strong {
-  color: var(--text);
-}
-.experimental-book-links {
-  display: flex;
-  gap: 8px;
-}
-.experimental-book-links a {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 7px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--green);
-  font-size: 11px;
-  font-weight: 700;
-  text-decoration: none;
-}
-.experimental-book-links a:hover {
-  border-color: var(--lime);
-  background: var(--surface-raised);
-}
 .public-view-banner {
   display: flex;
   align-items: center;
@@ -792,7 +750,6 @@ main {
     flex-direction: column;
     align-items: flex-end;
   }
-  .experimental-book-banner,
   .public-view-banner {
     width: min(390px, 52vw);
   }
@@ -805,7 +762,6 @@ main {
     width: 100%;
     align-items: stretch;
   }
-  .experimental-book-banner,
   .public-view-banner {
     width: 100%;
   }
@@ -2849,6 +2805,11 @@ nav button,
 .methodology-library > summary:focus-visible { outline:2px solid var(--lime); outline-offset:-3px; border-radius:var(--radius); }
 .methodology-library-copy { flex:1; min-width:0; }
 .methodology-library-copy > span { display:block; font-size:17px; color:var(--ink); line-height:1.65; text-wrap:pretty; }
+.methodology-library-copy > span + span { margin-top:12px; }
+.methodology-library-trigger{display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0;max-width:100%}
+.methodology-library-link{display:inline-flex;align-items:center;gap:5px;color:var(--blue-text);font-size:14px;font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.methodology-library-link>svg{transition:transform .15s}
+.methodology-library[open] .methodology-library-link>svg{transform:rotate(180deg)}
 .methodology-cover-preview { display:flex; align-items:center; gap:12px; flex-shrink:0; }
 .methodology-cover-preview img { width:auto; height:104px; border-radius:3px; box-shadow:0 3px 10px #0004; }
 .methodology-library-body { padding:16px; border-top:1px solid var(--border); }
@@ -3667,3 +3628,13 @@ button.mvp-link-chip:hover{background:rgba(var(--lane-rgb),.24)}
 .ai-intro-header .ai-section-title{display:flex;align-items:center;gap:10px;color:var(--lime)}
 .ai-intro-header .ai-section-title>svg{flex:0 0 auto;color:inherit}
 @media(max-width:600px){.page-heading .minimal-section-title{gap:9px}.page-heading .minimal-section-title>svg{width:23px;height:23px}}
+
+/* Generous create targets with the same identity as the destination section. */
+.record-create-button,.create-menu .record-create-button{display:inline-flex;align-items:center;justify-content:center;gap:11px;min-height:54px;max-width:100%;padding:14px 20px;border:1px solid color-mix(in srgb,var(--create-accent) 65%,transparent);border-radius:12px;background:color-mix(in srgb,var(--create-accent) 13%,var(--surface));color:var(--create-accent);font-size:16px;font-weight:750;line-height:1.35;text-align:center;white-space:normal;cursor:pointer;transition:background .15s,border-color .15s}
+.record-create-button>svg{flex:0 0 auto;width:24px;height:24px;color:inherit}
+.record-create-button:hover,.create-menu .record-create-button:hover{background:color-mix(in srgb,var(--create-accent) 23%,var(--surface));border-color:var(--create-accent);color:var(--create-accent)}
+.record-create-button:focus-visible{outline:2px solid var(--create-accent);outline-offset:3px}
+.record-create-button:disabled{opacity:.55;cursor:not-allowed}
+.create-menu .record-create-button{justify-content:flex-start;width:100%}
+.create-menu{min-width:235px;max-width:min(330px,calc(100vw - 40px))}
+@media(max-width:600px){.record-create-button,.create-menu .record-create-button{padding:13px 16px;font-size:15px;gap:9px}}

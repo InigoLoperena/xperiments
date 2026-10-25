@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronRight, Flag, FlaskConical, Lightbulb, Microscope, Pencil, Plus, Search, Target } from "lucide-react";
+import { RecordCreateButton } from "./record-create-button";
+import { ChevronRight, Flag, FlaskConical, Lightbulb, Microscope, Pencil, Search, Target } from "lucide-react";
 import type {Item} from "@/lib/model";
 import {score} from "@/lib/model";
 import {getMvpHierarchy} from "@/lib/mvp-hierarchy";
@@ -61,9 +62,9 @@ export function ProblemonSection({project,items,readOnly,canCreate,canEdit,compa
    </section>}
   </>:<>
 
-   {!readOnly&&canCreate&&<button type="button" className="btn primary problemon-create" onClick={onCreate}>
-    <Plus size={16} aria-hidden="true"/>Crear problema principal
-   </button>}
+   {!readOnly&&canCreate&&<RecordCreateButton kind="opportunity" principal className="problemon-create" onClick={onCreate}>
+    Crear problema principal
+   </RecordCreateButton>}
    {!compact&&!readOnly&&canEdit&&candidates.length>0&&<div className="problemon-choose">
     <label htmlFor={"problemon-existing-"+project.id}>Seleccionar un problema u oportunidad existente</label>
     <div><select id={"problemon-existing-"+project.id} value={candidateId} onChange={event=>setCandidateId(event.target.value)}>

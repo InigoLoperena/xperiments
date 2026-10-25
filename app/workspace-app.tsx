@@ -42,6 +42,7 @@ import { getProblemon, isProblemon } from "@/lib/problemon";
 import { demoItems, demoMembers, demoActivity } from "@/lib/demo";
 import { Avatar, ProfileDialog, type PersonalProfile } from "./profile-settings";
 import { RecordAttachments } from "./record-attachments";
+import { RecordCreateButton } from "./record-create-button";
 import { BrandIdentity } from "./brand-identity";
 import { TeamAccess } from "./team-access";
 import { BackupDialog, type BackupFormat } from "./backup-dialog";
@@ -67,7 +68,7 @@ import { fetchBackup, fetchCsvRecords } from "@/lib/backup-service";
 import { deleteWorkspaceRecord, loadWorkspaceRecords, ensureProjectNorthStar, projectNorthStarRecord } from "@/lib/record-service";
 import { createPersonalTeamSpace, getPublicPreview, listTeamSpaces, selectTeamSpace } from "@/lib/internal-space";
 import { registerAccount } from "@/lib/auth-service";
-import { attachmentBucket, supportsAttachments, type Attachment } from "@/lib/attachments";
+import { attachmentBucket, attachmentFileType, supportsAttachments, type Attachment } from "@/lib/attachments";
 import { cleanupAttachments } from "@/lib/attachment-service";
 import {
   ancestors,
@@ -269,30 +270,6 @@ const mvpSchemas: Partial<Record<Kind, Field[]>> = {
   ],
   // Experiments share schemas.experiment with Growth Tree; no separate MVP form.
 };
-const experimentalBookCover = "/la-empresa-experimental.svg";
-const experimentalBookAmazon = "https://www.amazon.es/gp/product/B0GXPMFM7P/ref=kinw_myk_ro_title";
-const experimentalBookPdf = "https://drive.google.com/file/d/1dpZhjPz76bqfH8lcxpw9CppshkaDusxK/view?usp=sharing";
-
-function ExperimentalBookBanner() {
-  return (
-    <aside className="experimental-book-banner">
-      <img src={experimentalBookCover} alt="Portada de La Empresa Experimental" />
-      <div className="experimental-book-copy">
-        <p>
-          Experimental Innovation OS está basado en la metodología del libro
-          <strong> La Empresa Experimental</strong> de Product Hackers.
-        </p>
-        <div className="experimental-book-links">
-          <a href={experimentalBookAmazon} target="_blank" rel="noreferrer">
-            Amazon <ArrowUpRight size={13} />
-          </a>
-          {/* PDF temporalmente oculto. Mantener experimentalBookPdf para reactivarlo exactamente igual. */}
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 function PublicViewBanner({ onSignup }: { onSignup: () => void }) {
   return (
     <aside className="public-view-banner">
@@ -1152,6 +1129,8 @@ export default function Home() {
       setError(problem);
       return;
     }
+    try { for (const file of draftFiles) attachmentFileType(file); }
+    catch (err) { setError(err instanceof Error ? err.message : "Revisa los archivos adjuntos."); return; }
     setSaving(true);
     try {
     setError("");
@@ -1179,6 +1158,14 @@ export default function Home() {
       }
     }
     if (demo) {
+      if (draftFiles.length) {
+        const additions: Attachment[] = draftFiles.map(file => {
+          const type = attachmentFileType(file);
+          return { id: crypto.randomUUID(), record_id: record.id, workspace_id: record.workspace_id, name: file.name,
+            kind: type.kind, storage_path: null, url: null, mime_type: type.mime, size: file.size, preview_url: URL.createObjectURL(file) };
+        });
+        setDemoAttachments(prev => ({ ...prev, [record.id]: [...(prev[record.id] || []), ...additions] }));
+      }
       setItems((prev) =>
         exists
           ? prev.map((i) => (i.id === record.id ? record : i))
@@ -1239,7 +1226,7 @@ export default function Home() {
         "Otra persona ha modificado este registro. Cierra el formulario y actualiza antes de editar.",
       );
     } else {
-      if(record.kind==='experiment' && draftFiles.length){
+      if(draftFiles.length){
         const remaining=[...draftFiles];
         try{
           while(remaining.length){await addFileAttachment(record.id,record.workspace_id,remaining[0]);remaining.shift();setDraftFiles([...remaining]);}
@@ -1496,7 +1483,7 @@ export default function Home() {
           </details>
         )}
         {can(i.kind==='goal'?'opportunity':i.kind==='opportunity'?'hypothesis':'experiment','create') && ["goal", "opportunity", "hypothesis"].includes(i.kind) && (
-          <button
+          <RecordCreateButton kind={i.kind === "goal" ? "opportunity" : i.kind === "opportunity" ? "hypothesis" : "experiment"}
             className="add-node"
             onClick={() =>
               create(
@@ -1509,13 +1496,12 @@ export default function Home() {
               )
             }
           >
-            <Plus size={14} />
             {i.kind === "goal"
               ? "Añadir oportunidad"
               : i.kind === "opportunity"
                 ? "Añadir hipótesis"
                 : "Diseñar experimento"}
-          </button>
+          </RecordCreateButton>
         )}
       </div>
     );
@@ -1963,27 +1949,26 @@ export default function Home() {
                 {viewLabels[view] || nav.find((n) => n.id === view)?.label}
               </h1>           </div>
             <div className="page-heading-actions">
-              {(view === "projects" || view === "map") && <ExperimentalBookBanner />}
               {publicMode && <PublicViewBanner onSignup={() => requestAuth("signup")} />}
               {editable && createKind && (!projectScoped || currentProject) && (
                 view === "map" ? (
                   <div className="create-control create-menu-wrap">
-                    <Action className="primary" onClick={() => setShowCreateMenu(v => !v)}>
-                      <Plus size={17} /> Crear
-                    </Action>
+                    <RecordCreateButton kind={createKind} icon={<GitBranch size={24} aria-hidden="true" />} accent={sectionHeadings.map.color} aria-expanded={showCreateMenu} onClick={() => setShowCreateMenu(v => !v)}>
+                      Crear
+                    </RecordCreateButton>
                     {showCreateMenu && <div className="create-menu">
                       {(["goal", "opportunity", "hypothesis", "experiment"] as Kind[]).map(k => (
-                        <button key={k} onClick={() => { setShowCreateMenu(false); create(k); }}>
+                        <RecordCreateButton kind={k} key={k} onClick={() => { setShowCreateMenu(false); create(k); }}>
                           {kinds[k]}
-                        </button>
+                        </RecordCreateButton>
                       ))}
                     </div>}
                   </div>
                 ) : (
                   <div className="create-control">
-                    <Action className="primary" onClick={() => create(createKind)}>
-                      <Plus size={17} /> Crear
-                    </Action>
+                    <RecordCreateButton kind={createKind} inputMetric={view === "input_metrics"} onClick={() => create(createKind)}>
+                      Crear
+                    </RecordCreateButton>
                   </div>
                 )
               )}
@@ -2146,6 +2131,7 @@ export default function Home() {
               ) : (
                 <Empty
                   title="Define tu North Star"
+                  kind="north_star"
                   text="Define la métrica que representa el valor que este proyecto aporta a sus usuarios."
                   action={can('north_star','create') ? () => create("north_star") : undefined}
                 />
@@ -2171,9 +2157,9 @@ export default function Home() {
                         </h3>
                       </div>
                       {can("goal", "create") && nsm && (
-                        <Action onClick={() => create("goal", null, section.key)}>
-                          <Plus size={16} /> {section.action}
-                        </Action>
+                        <RecordCreateButton kind="goal" inputMetric={section.key === "input_metrics"} onClick={() => create("goal", null, section.key)}>
+                          {section.action}
+                        </RecordCreateButton>
                       )}
                     </div>
                     <div className="goi-grid">
@@ -2193,9 +2179,9 @@ export default function Home() {
                               </summary>
                               {items.filter((i) => i.parent_id === g.id && i.kind === "opportunity").map(branch)}
                               {can("opportunity", "create") && (
-                                <button className="add-node" onClick={() => create("opportunity", g.id)}>
-                                  <Plus size={14} /> Añadir oportunidad-problema
-                                </button>
+                                <RecordCreateButton kind="opportunity" className="add-node" onClick={() => create("opportunity", g.id)}>
+                                  Añadir oportunidad-problema
+                                </RecordCreateButton>
                               )}
                             </details>
                           </section>
@@ -2547,6 +2533,7 @@ export default function Home() {
                 <Empty
                   title="Documenta lo que has aprendido"
                   text="Guarda el resultado, la evidencia, la conclusión y el siguiente paso en una ficha separada del experimento."
+                  kind="learning"
                   action={can('learning','create') ? () => create("learning") : undefined}
                 />
               )}
@@ -2808,7 +2795,7 @@ export default function Home() {
               </Action>
             )}
             {selected.kind === "experiment" && can('learning','create') && (
-              <Action
+              <RecordCreateButton kind="learning"
                 disabled={attachmentsBusy || monitoringBusy}
                 onClick={() => {
                   create("learning", selected.id);
@@ -2816,7 +2803,7 @@ export default function Home() {
                 }}
               >
                 Documentar aprendizaje
-              </Action>
+              </RecordCreateButton>
             )}
             {supportsAttachments(selected.kind) ? <RecordAttachments key={selected.id}
               record={selected} editable={can(selected.kind,'edit')} demo={demo} prefetched={publicMode} values={publicMode ? publicAttachments.filter(a => a.record_id === selected.id) : (demoAttachments[selected.id] || [])}
@@ -3120,6 +3107,7 @@ export default function Home() {
               {supportsAttachments(draft.kind) ? <RecordAttachments key={draft.id}
                 record={draft} editable={can(draft.kind,'edit') && !saving} demo={demo} prefetched={publicMode} values={publicMode ? publicAttachments.filter(a => a.record_id === draft.id) : (demoAttachments[draft.id] || [])}
                 persisted={allItems.some(item => item.id === draft.id)}
+                pendingFiles={draftFiles} onPendingFiles={setDraftFiles}
                 onDemoChange={values => setDemoAttachments(prev => ({ ...prev, [draft.id]: values }))} onBusy={setAttachmentsBusy}>
                 {({ links, files }) => <>{draftFields()}<div className="full">{links}</div>{draft.kind === "experiment" && <>
                   <ExperimentExecution draft={draft} disabled={saving||assistantBusy} onChange={setDraft} channelOnly/>
@@ -3186,10 +3174,12 @@ function Empty({
   title,
   text,
   action,
+  kind = "project",
 }: {
   title: string;
   text: string;
   action?: () => void;
+  kind?: Kind;
 }) {
   return (
     <div className="empty">
@@ -3197,9 +3187,7 @@ function Empty({
       <h3>{title}</h3>
       <p>{text}</p>
       {action && (
-        <Action className="primary" onClick={action}>
-          <Plus size={16} /> Crear
-        </Action>
+        <RecordCreateButton kind={kind} onClick={action}>Crear</RecordCreateButton>
       )}
     </div>
   );

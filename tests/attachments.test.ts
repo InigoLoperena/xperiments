@@ -16,6 +16,36 @@ test("attachment inputs reject unsafe links, unsupported files and oversized upl
     assert.throws(() => attachmentFileType(file));
 });
 
+test("every record kind accepts private file metadata, including MVP records, projects and videos, while paths and attribution remain protected", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(`create schema auth;create role anon;create role authenticated;
+      create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+      create table public.records(id uuid primary key,workspace_id uuid,kind text);
+      create table public.record_attachments(id uuid primary key,record_id uuid,workspace_id uuid,kind text,storage_path text,url text,mime_type text,size bigint,created_by uuid,created_at timestamptz);`);
+    await db.exec(await readFile(new URL("../supabase/migrations/20261025020051_all_record_attachment_uploads.sql", import.meta.url), "utf8"));
+    await db.exec("create trigger attachment_identity before insert on public.record_attachments for each row execute function public.stamp_attachment()");
+    const workspace = randomUUID(), author = randomUUID();
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [author]);
+    async function attach(recordId: string, ext: string, team = workspace, path?: string) {
+      const id = randomUUID();
+      return db.query<{ created_by: string }>("insert into public.record_attachments(id,record_id,workspace_id,kind,storage_path,mime_type,size,created_by) values($1,$2,$3,$4,$5,$6,20,$7) returning created_by", [id,recordId,team,ext === 'png' ? 'image' : 'video',path || `${team}/${recordId}/${id}.${ext}`,ext === 'png' ? 'image/png' : `video/${ext}`,randomUUID()]);
+    }
+    let recordId = "";
+    for (const kind of ["project", "north_star", "goal", "opportunity", "hypothesis", "research", "idea", "experiment", "learning", "objective", "kr"]) {
+      recordId = randomUUID();
+      await db.query("insert into public.records values($1,$2,$3)", [recordId,workspace,kind]);
+      assert.equal((await attach(recordId, 'png')).rows[0].created_by, author, kind);
+    }
+    await attach(recordId, 'mp4'); await attach(recordId, 'webm');
+    await assert.rejects(attach(recordId, 'png', randomUUID()), /no admite adjuntos/);
+    await assert.rejects(attach(recordId, 'png', workspace, `${workspace}/${recordId}/${randomUUID()}.png`), /Ruta de adjunto inválida/);
+    await assert.rejects(attach(recordId, 'html'), /Ruta de adjunto inválida/);
+    const grants = await db.query<{ allowed: boolean }>("select has_function_privilege('authenticated','public.stamp_attachment()','EXECUTE') as allowed");
+    assert.equal(grants.rows[0].allowed, false);
+  } finally { await db.close(); }
+});
+
 test("private attachments enforce company isolation, reader restrictions, attribution and cleanup after company deletion", async () => {
   const db = new PGlite();
   try {
