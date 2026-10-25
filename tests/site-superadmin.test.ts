@@ -7,7 +7,8 @@ test('Superadministrador menu follows Cómo utilizar and requires the site-edito
  const menu=source.indexOf('{ id: "superadmin", label: "Superadministrador"');
  const method=source.indexOf('{ id: "method", label: "Cómo utilizar Xperiments"');
  assert.ok(menu>method);
- assert.match(source,/nav\.filter\(item => item\.id !== "superadmin" \|\| siteBlogEditor\)/);
+ assert.match(source,/\{nav\.map\(\(\{ id, label, icon: I \}\) => \(/);
+ assert.match(source,/id === "superadmin" && !siteBlogEditor \? null/);
  assert.match(source,/supabase\.rpc\('is_blog_editor'\)/);
  assert.match(source,/blogAdminGrant\?\.userId === user\.id && blogAdminGrant\.allowed/);
  assert.match(source,/view === "superadmin"[\s\S]*?siteBlogEditor[\s\S]*?<SiteAdminBlog/);
