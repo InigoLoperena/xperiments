@@ -47,6 +47,7 @@ import { RecordAttachments } from "./record-attachments";
 import { RecordCreateButton } from "./record-create-button";
 import { BrandIdentity } from "./brand-identity";
 import { LanguageSwitcher, useLanguage } from "./language-controller";
+import { EnglishMethodGuide } from "./method-guide-en";
 import { TeamAccess } from "./team-access";
 import { BackupDialog, type BackupFormat } from "./backup-dialog";
 import { PostHogResults } from "./posthog-results";
@@ -3444,6 +3445,8 @@ function Auth({
   );
 }
 function Method() {
+  const { language } = useLanguage();
+  if (language === "en") return <EnglishMethodGuide/>;
   return (
     <div className="method-content">
       <section className="panel">
