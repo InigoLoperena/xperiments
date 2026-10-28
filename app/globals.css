@@ -3638,3 +3638,14 @@ button.mvp-link-chip:hover{background:rgba(var(--lane-rgb),.24)}
 .create-menu .record-create-button{justify-content:flex-start;width:100%}
 .create-menu{min-width:235px;max-width:min(330px,calc(100vw - 40px))}
 @media(max-width:600px){.record-create-button,.create-menu .record-create-button{padding:13px 16px;font-size:15px;gap:9px}}
+
+/* Shared ES/EN selector in public site, workspace and sign-in. */
+.language-switcher{display:inline-flex;align-items:center;flex-shrink:0;position:relative}
+.language-switcher select{appearance:none;cursor:pointer;min-width:63px;min-height:35px;padding:7px 23px 7px 11px;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:8px;font-size:12px;line-height:1.2;font-weight:800;letter-spacing:.07em}
+.language-switcher:after{content:"⌄";pointer-events:none;position:absolute;right:9px;top:5px;color:var(--blue-text);font-size:16px}
+.language-switcher select:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.public-header .language-switcher select{background:#172743;color:#edf2ff}
+.topbar>.language-switcher{align-self:center}
+.auth-language-switcher{position:absolute;top:20px;right:22px;z-index:3}
+.auth-shell{position:relative}
+@media(max-width:700px){.public-header .language-switcher{margin-left:auto}.topbar>.language-switcher{margin-left:auto}}

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import './public-site.css';
+import { LanguageSwitcher } from './language-controller';
 
 export function PublicSiteFooter() {
  return <footer className="public-footer">
@@ -13,7 +14,7 @@ export function PublicSiteShell({ children }: { children: ReactNode }) {
   <a className="public-skip-link" href="#contenido">Saltar al contenido</a>
   <header className="public-header">
    <a className="public-brand" href="/" aria-label="Xperiments, inicio"><img src="/logo.svg?v=light-blue-20261024" alt="Xperiments" width={210} height={72}/></a>
-   <nav aria-label="Navegación pública"><a href="/#como-funciona">Cómo funciona</a><a href="/blog">Blog</a><a href="/guia-investigacion">Recursos</a><a className="public-button public-button-small" href="/proyectos">Acceder <span aria-hidden="true">↗</span></a></nav>
+   <nav aria-label="Navegación pública"><a href="/#como-funciona">Cómo funciona</a><a href="/blog">Blog</a><a href="/guia-investigacion">Recursos</a><a className="public-button public-button-small" href="/proyectos">Acceder <span aria-hidden="true">↗</span></a><LanguageSwitcher/></nav>
   </header>
   {children}
   <PublicSiteFooter/>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/public-site";
 import "./globals.css";
+import { LanguageProvider } from "./language-controller";
 import "./blog/blog.css";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -12,8 +13,8 @@ export const metadata: Metadata = {
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body>{children}</body>
+    <html lang="es" suppressHydrationWarning>
+      <body><LanguageProvider>{children}</LanguageProvider></body>
     </html>
   );
 }

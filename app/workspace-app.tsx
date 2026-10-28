@@ -46,6 +46,7 @@ import { Avatar, ProfileDialog, type PersonalProfile } from "./profile-settings"
 import { RecordAttachments } from "./record-attachments";
 import { RecordCreateButton } from "./record-create-button";
 import { BrandIdentity } from "./brand-identity";
+import { LanguageSwitcher, useLanguage } from "./language-controller";
 import { TeamAccess } from "./team-access";
 import { BackupDialog, type BackupFormat } from "./backup-dialog";
 import { PostHogResults } from "./posthog-results";
@@ -458,6 +459,7 @@ function ProjectLogo({ project, size = "normal" }: { project: Item; size?: "norm
   );
 }
 export default function Home() {
+  const { t } = useLanguage();
   const [view, setView] = useState<View>("projects");
   const CurrentSectionIcon=sectionHeadings[view].icon;
   useEffect(()=>{
@@ -1843,7 +1845,7 @@ export default function Home() {
                 onClick={() => navigateView(id)}
               >
                 <I size={18} />
-                {label}
+                {t(label)}
                 {id === "mvp" && (
                   <span className="nav-count" title="Fichas de MVPs Tree en el proyecto seleccionado" aria-label={`${mvpTreeCount} fichas de MVPs Tree`}>
                     {mvpTreeCount}
@@ -1860,23 +1862,23 @@ export default function Home() {
                       className={"nav-mvp-subsection " + accent + (view === section ? " active" : "")}
                       style={{color:treeAccentColor(accent)}}
                       onClick={() => navigateView(section)}>
-                      <SubIcon size={16} color={treeAccentColor(accent)} aria-hidden="true" />{sectionLabel}
+                      <SubIcon size={16} color={treeAccentColor(accent)} aria-hidden="true" />{t(sectionLabel)}
                     </button>
                   ))}
                 </div>
               )}
               {id === "map" && (
                 <div className="nav-subsections">
-                  <button className={`nav-goi-subsection problemon ${view === "problemon" ? "active" : ""}`.trim()} style={{color:treeAccentColor("problemon")}} onClick={() => navigateView("problemon")}><Flag size={16} color={treeAccentColor("problemon")} aria-hidden="true" />Problema principal</button>
+                  <button className={`nav-goi-subsection problemon ${view === "problemon" ? "active" : ""}`.trim()} style={{color:treeAccentColor("problemon")}} onClick={() => navigateView("problemon")}><Flag size={16} color={treeAccentColor("problemon")} aria-hidden="true" />{t("Problema principal")}</button>
                   <button className={`nav-goi-subsection objective ${view === "goals" ? "active" : ""}`.trim()} onClick={() => navigateView("goals")}>
-                    <Target size={16} aria-hidden="true" />{viewLabels.goals}
+                    <Target size={16} aria-hidden="true" />{t(viewLabels.goals || "Objetivos")}
                   </button>
                   <button className={`nav-goi-subsection input-metric ${view === "input_metrics" ? "active" : ""}`.trim()} onClick={() => navigateView("input_metrics")}>
-                    <BarChart3 size={16} aria-hidden="true" />{viewLabels.input_metrics}
+                    <BarChart3 size={16} aria-hidden="true" />{t(viewLabels.input_metrics || "Input Metrics")}
                   </button>
-                  <button className={`nav-goi-subsection opportunity ${view === "opportunities" ? "active" : ""}`.trim()} style={{color:treeAccentColor("opportunity")}} onClick={() => navigateView("opportunities")}><Search size={16} color={treeAccentColor("opportunity")} aria-hidden="true" />{viewLabels.opportunities}</button>
-                  <button className={`nav-goi-subsection hypothesis ${view === "ideas" ? "active" : ""}`.trim()} style={{color:treeAccentColor("hypothesis")}} onClick={() => navigateView("ideas")}><Lightbulb size={16} color={treeAccentColor("hypothesis")} aria-hidden="true" />Hipótesis</button>
-                  <button className={`nav-goi-subsection experiment ${view === "experiments" ? "active" : ""}`.trim()} style={{color:treeAccentColor("experiment")}} onClick={() => navigateView("experiments")}><FlaskConical size={16} color={treeAccentColor("experiment")} aria-hidden="true" />Experimentos <span className="nav-count">{experiments.length}</span></button>
+                  <button className={`nav-goi-subsection opportunity ${view === "opportunities" ? "active" : ""}`.trim()} style={{color:treeAccentColor("opportunity")}} onClick={() => navigateView("opportunities")}><Search size={16} color={treeAccentColor("opportunity")} aria-hidden="true" />{t(viewLabels.opportunities || "Oportunidades")}</button>
+                  <button className={`nav-goi-subsection hypothesis ${view === "ideas" ? "active" : ""}`.trim()} style={{color:treeAccentColor("hypothesis")}} onClick={() => navigateView("ideas")}><Lightbulb size={16} color={treeAccentColor("hypothesis")} aria-hidden="true" />{t("Hipótesis")}</button>
+                  <button className={`nav-goi-subsection experiment ${view === "experiments" ? "active" : ""}`.trim()} style={{color:treeAccentColor("experiment")}} onClick={() => navigateView("experiments")}><FlaskConical size={16} color={treeAccentColor("experiment")} aria-hidden="true" />{t("Experimentos")} <span className="nav-count">{experiments.length}</span></button>
                 </div>
               )}
             </Fragment>
@@ -1960,6 +1962,7 @@ export default function Home() {
               <RefreshCw size={17} className={loading ? "spin" : ""} />
             </button>
           </div>
+          <LanguageSwitcher/>
         </header>
         <main>
           {demo && (
@@ -3276,6 +3279,7 @@ function Auth({
   }, []);
   return (
     <div className="auth-shell">
+      <div className="auth-language-switcher"><LanguageSwitcher/></div>
       <div className="auth-intro">
         <BrandIdentity />
         <h1>
