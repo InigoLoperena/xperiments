@@ -12,6 +12,7 @@ export const englishInterfaceCopy: Readonly<Record<string,string>> = {
   "Saltar al contenido": "Skip to content",
   "Xperiments, inicio": "Xperiments, home",
   "Experimenta con intención. Conserva lo aprendido.": "Experiment with purpose. Keep what you learn.",
+  "Editor: Iñigo Loperena ·": "Publisher: Iñigo Loperena ·",
   "Editor:": "Publisher:",
   "Probar gratis, sin tarjeta": "Try for free, no card required",
   "Ver demo": "View demo",

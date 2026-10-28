@@ -63,7 +63,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     };
 
     const applyAttributes = (element: Element) => {
-      if (!allowed(element)) return;
+      // Textareas contain editable text, but their placeholders still need localization.
+      if (element.closest('[data-i18n-skip], [translate="no"], [contenteditable="true"]') ||
+          ["SCRIPT", "STYLE", "NOSCRIPT"].includes(element.tagName)) return;
       const originals = originalAttributes.current.get(element) ?? new Map<string, string>();
       const applied = appliedAttributes.current.get(element) ?? new Map<string, string>();
       for (const attr of translatableAttributes) {
