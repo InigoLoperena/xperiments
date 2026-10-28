@@ -1,7 +1,7 @@
 import {
-  ArrowRight, BrainCircuit, BookOpen, CheckCircle2, CircleDot, FileStack,
+  ArrowRight, BarChart3, BrainCircuit, BookOpen, CheckCircle2, CircleDot, FileStack,
   FileText, FlaskConical, GitBranch, Layers, Lightbulb, Link2, Microscope,
-  Search, ShieldCheck, Sparkles, Target, Users, Workflow,
+  Search, Sparkles, Target, Users, Workflow,
 } from 'lucide-react';
 import { PublicSiteShell } from './public-site-shell';
 import { LegacyAuthBridge } from './legacy-auth-bridge';
@@ -85,11 +85,9 @@ export default function LandingPage() {
   <main id="contenido" className="public-main">
    <section className="landing-hero" aria-labelledby="landing-title">
     <div className="landing-hero-copy">
-     <p className="public-eyebrow"><span aria-hidden="true"/> EXPERIMENTACIÓN INTELIGENTE</p>
      <h1 id="landing-title">Deja de decidir por intuición.<br/><span>Aprende de cada experimento.</span></h1>
      <p className="landing-definition">Una IA que utiliza el contexto de tus experimentos, hipótesis y aprendizajes y la metodología Growth Tree para ayudarte a diseñar mejores estrategias de crecimiento.</p>
      <LandingActions/>
-     <p className="public-caption"><ShieldCheck size={14} aria-hidden="true"/> Crea tu espacio sin tarjeta · Revisa cada decisión · Tu equipo comparte lo aprendido</p>
     </div>
     <div className="experiment-preview" aria-label="Ejemplo ilustrativo del flujo de un experimento">
      <div className="preview-window-bar"><span className="preview-window-dots" aria-hidden="true">● ● ●</span><span>UN EJEMPLO, DE PRINCIPIO A FIN</span></div>
@@ -103,7 +101,6 @@ export default function LandingPage() {
 
    <section className="landing-problem-block landing-section" aria-labelledby="problem-heading">
     <div className="landing-section-heading">
-     <p className="public-eyebrow">EL PROBLEMA NO ES QUE NO EXPERIMENTES</p>
      <h2 id="problem-heading">Haces pruebas.<br/><span>Pero pierdes lo que aprendes.</span></h2>
      <p>Los resultados acaban en un documento de Notion, en un hilo de Slack o en una hoja de cálculo que nadie vuelve a abrir.</p>
      <p>Tres meses después, alguien propone la misma idea. Nadie recuerda que ya se probó. O peor: salió mal y se repite exactamente igual.</p>
@@ -120,17 +117,14 @@ export default function LandingPage() {
 
    <section className="landing-section landing-connected" id="como-funciona" aria-labelledby="connected-heading">
     <div className="landing-section-heading landing-centered-heading">
-     <p className="public-eyebrow">EL CONOCIMIENTO NO TERMINA CON LA PRUEBA</p>
      <h2 id="connected-heading">Un espacio donde <span>todo vive conectado.</span></h2>
      <p>Problemas, hipótesis, investigación, experimentos, resultados y aprendizaje colectivo. Cada prueba queda atada a lo que querías comprobar y a lo que realmente ocurrió.</p>
     </div>
     <ExperimentationTreeBanner/>
-    <p className="landing-example-caption">Vista ilustrativa basada en el sistema de fichas y relaciones de MVPs Tree. Las investigaciones y los experimentos comparten su hipótesis, sin duplicar registros.</p>
    </section>
 
    <section className="landing-section landing-dual-trees" aria-labelledby="trees-heading">
     <div className="landing-section-heading">
-     <p className="public-eyebrow">DOS FORMAS DE ORDENAR EL MISMO CONOCIMIENTO</p>
      <h2 id="trees-heading">Investiga mejor. <span>Crece con estrategia.</span></h2>
      <p>Dos árboles para necesidades distintas, con los mismos problemas, hipótesis y experimentos siempre conectados.</p>
     </div>
@@ -146,12 +140,10 @@ export default function LandingPage() {
       <div className="landing-tree-product-stack"><span><Target size={15}/> North Star Metric</span><span><CircleDot size={15}/> Objetivos / Input Metrics</span><span><Search size={15}/> Oportunidades → Hipótesis</span><span><FlaskConical size={15}/> Experimentos</span></div>
      </article>
     </div>
-    <div className="landing-shared-record"><Link2 size={20} aria-hidden="true"/><p><strong>Un solo historial, compartido entre los dos árboles.</strong> Lo que creas, editas y aprendes en uno está disponible en el otro.</p></div>
    </section>
 
    <section className="landing-section landing-ai-section" aria-labelledby="ai-heading">
     <div className="landing-ai-copy">
-     <p className="public-eyebrow">UNA IA CON MEMORIA Y METODOLOGÍA</p>
      <h2 id="ai-heading">Tu IA no debería <span>empezar de cero.</span></h2>
      <p>La IA de Xperiments combina el contexto disponible de tus proyectos, pruebas anteriores y conclusiones con principios metodológicos para ayudarte a formular hipótesis, guiar investigaciones y diseñar experimentos.</p>
      <p>Te ayuda a hacer las preguntas correctas para validar tu propuesta de valor, modelo de negocio o estrategia de marketing. Y puede proponerte la siguiente prueba partiendo de lo que ya sabes.</p>
@@ -168,7 +160,6 @@ export default function LandingPage() {
 
    <section className="landing-import-section landing-section" aria-labelledby="import-heading">
     <div className="landing-section-heading">
-     <p className="public-eyebrow">TU PROYECTO, TU CONTEXTO</p>
      <h2 id="import-heading">Haz que tu IA <span>entienda tu negocio.</span></h2>
      <p>Importa información cualitativa o cuantitativa de tus proyectos: entrevistas, documentos, resultados, investigaciones y datos de tus campañas. Cuanto mejor esté documentado el contexto, mejores preguntas podrá ayudarte a formular.</p>
      <a className="public-text-link" href="/guia-investigacion">Cómo importar información y realizar investigaciones <ArrowRight size={17} aria-hidden="true"/></a>
@@ -188,25 +179,44 @@ export default function LandingPage() {
     </div>
    </section>
 
+
+   <section className="landing-section landing-api-section" aria-labelledby="api-heading">
+    <div className="landing-section-heading landing-centered-heading">
+     <h2 id="api-heading">Integra tus herramientas y APIs. <span>Todos tus datos en un panel.</span></h2>
+     <p>Conecta PostHog, Meta Ads y Google Ads para consultar las métricas de tus experimentos y campañas desde un único lugar. Utiliza esos resultados para aportar contexto real a la IA de Xperiments.</p>
+    </div>
+    <div className="landing-api-flow" role="group" aria-label="Las herramientas conectadas envían sus métricas a un panel unificado que aporta contexto a la IA">
+     <div className="landing-api-sources">
+      <div className="landing-api-source"><span className="landing-api-source-icon"><CircleDot size={21} aria-hidden="true"/></span><div><strong>PostHog</strong><small>Eventos, embudos y experimentos</small></div></div>
+      <div className="landing-api-source"><span className="landing-api-source-icon"><Target size={21} aria-hidden="true"/></span><div><strong>Meta Ads</strong><small>Campañas y rendimiento</small></div></div>
+      <div className="landing-api-source"><span className="landing-api-source-icon"><BarChart3 size={21} aria-hidden="true"/></span><div><strong>Google Ads</strong><small>Tráfico y conversiones</small></div></div>
+     </div>
+     <span className="landing-api-arrow" aria-hidden="true"><ArrowRight size={25}/></span>
+     <div className="landing-api-panel">
+      <span className="landing-api-label"><Workflow size={17} aria-hidden="true"/> PANEL ÚNICO</span>
+      <h3>Tus métricas, en contexto</h3>
+      <p>Consulta los datos disponibles de tus campañas y experimentos junto a la hipótesis que estás validando.</p>
+      <div className="landing-api-metrics"><span>Conversiones</span><span>CTR</span><span>Registros</span></div>
+     </div>
+     <span className="landing-api-arrow" aria-hidden="true"><ArrowRight size={25}/></span>
+     <div className="landing-api-ai">
+      <span className="landing-api-label"><Sparkles size={17} aria-hidden="true"/> IA DE XPERIMENTS</span>
+      <h3>Decisiones basadas en datos</h3>
+      <p>La IA puede combinar las métricas conectadas con tus hipótesis y aprendizajes para ayudarte a interpretar resultados y plantear el siguiente experimento.</p>
+     </div>
+    </div>
+    <p className="landing-api-note"><Link2 size={15} aria-hidden="true"/> La disponibilidad de datos depende de las conexiones, permisos y capacidades de cada plataforma.</p>
+   </section>
+
    <section className="landing-section landing-advantage" aria-labelledby="advantage-heading">
     <div className="landing-advantage-header">
-     <p className="public-eyebrow">LA VENTAJA COMPETITIVA ES APRENDER ANTES</p>
      <h2 id="advantage-heading">La experimentación inteligente te ayuda a entender qué necesita el mercado y a diseñar mejores estrategias.</h2>
-     <p>Xperiments es el sitio donde una prueba no termina cuando termina: queda guardada con su hipótesis, su métrica y lo aprendido. Tu siguiente decisión aprovecha lo que ya has descubierto.</p>
     </div>
-    <div className="landing-advantage-metrics">
-     <div><span><Search size={20} aria-hidden="true"/></span><strong>Entender</strong><p>Qué problemas y necesidades importan de verdad.</p></div>
-     <div><span><FlaskConical size={20} aria-hidden="true"/></span><strong>Validar</strong><p>Qué hipótesis resisten pruebas reales.</p></div>
-     <div><span><Workflow size={20} aria-hidden="true"/></span><strong>Aprender</strong><p>Qué repetir, cambiar o descartar con evidencia.</p></div>
-    </div>
-    <div className="landing-integrations-inline"><Link2 size={18} aria-hidden="true"/><span>Integra herramientas como PostHog, Meta Ads y Google Ads según sus capacidades y permisos; mantén tus resultados conectados con la estrategia.</span></div>
    </section>
 
    <section className="landing-section landing-faq" aria-labelledby="faq-heading"><div className="landing-section-heading"><p className="public-eyebrow">TUS PREGUNTAS</p><h2 id="faq-heading">Preguntas frecuentes</h2></div><div>{productFaqs.map(faq=><details key={faq.question}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></section>
 
    <section className="landing-final landing-final-new" aria-labelledby="final-cta-heading">
-    <div className="landing-final-orb"><BrainCircuit size={31} aria-hidden="true"/></div>
-    <p className="public-eyebrow">NO EMPIECES OTRA VEZ DESDE CERO</p>
     <h2 id="final-cta-heading">Deja de decidir por intuición.<br/><span>Empieza a aprender de cada prueba.</span></h2>
     <p>Una misma memoria para tu equipo, tus experimentos y la IA que te ayuda a avanzar.</p>
     <LandingActions secondary/>
