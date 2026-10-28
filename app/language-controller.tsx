@@ -58,6 +58,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (appliedText.current.get(node) !== current) originalText.current.set(node, current);
       const source = originalText.current.get(node) ?? current;
       const value = translateUI(source, language);
+      // <option> without an explicit value uses its text as the submitted value.
+      // Preserve that Spanish value before changing the visible option label.
+      const option = node.parentElement?.closest("option");
+      if (option && !option.hasAttribute("value") && current !== value) {
+        option.setAttribute("value", option.value);
+      }
       appliedText.current.set(node, value);
       if (current !== value) node.data = value;
     };
