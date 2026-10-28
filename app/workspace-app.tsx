@@ -591,6 +591,12 @@ export default function Home() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("recovery")) setRecovery(true);
+    // The landing's free-trial CTA opens the real signup screen, not the
+    // public read-only workspace. Visitors using "Ver demo" remain anonymous.
+    if (params.get("signup") === "1" && !params.has("invite") && !params.has("recovery")) {
+      setAuthMode("signup");
+      setAuthRequested(true);
+    }
     setPendingInvite(params.get("invite") || "");
   }, []);
   useEffect(() => {
