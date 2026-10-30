@@ -420,3 +420,67 @@
  .xl-scattered{padding:17px 12px}
  .xl-scattered-row{gap:10px;font-size:13px;min-height:60px}
 }
+
+/* Landing: equal-width illustrations next to the corresponding copy. */
+.landing-hero,.landing-connected{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:clamp(24px,4vw,56px)}
+.landing-hero{padding:62px 0 72px}
+.landing-hero-copy{width:100%;max-width:none;min-width:0}
+.landing-hero h1{font-size:clamp(37px,3.9vw,56px);letter-spacing:-1.8px;line-height:1.13}
+.landing-hero .landing-definition{max-width:none;font-size:15px;line-height:1.75}
+.landing-hero .landing-cta-actions{gap:12px;margin-top:25px}
+.landing-hero .landing-cta-actions .public-button{font-size:13px;padding:12px 15px}
+.landing-hero>.xl-discovery,.landing-connected>.xl-connected-tree{width:100%;min-width:0;max-width:100%;justify-self:stretch}
+.landing-connected .landing-section-heading{text-align:left;align-items:flex-start;display:block;min-width:0}
+.landing-connected .landing-section-heading h2{margin-top:0}
+.landing-connected .landing-section-heading>p:not(.public-eyebrow){max-width:none}
+/* Compact diagram layout, preserving every illustrated step and label. */
+.landing-hero .xl-discovery{display:flex;flex-direction:column;min-height:0;padding:19px 17px;gap:19px}
+.landing-hero .xl-discovery-left{gap:14px}
+.landing-hero .xl-discovery-left:before,.landing-hero .xl-discovery-hypothesis:before,
+.landing-hero .xl-discovery-hypothesis:after,.landing-hero .xl-discovery-right:before,
+.landing-hero .xl-discovery-right:after,.landing-hero .xl-discovery-right>.xl-graphic-card:before,
+.landing-hero .xl-discovery-right>.xl-graphic-card:after{display:none}
+.landing-hero .xl-discovery-hypothesis{margin-left:8%}
+.landing-hero .xl-discovery-right{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:0 0 0 5%;gap:11px}
+.landing-hero .xl-graphic-card{padding:14px;gap:11px;border-radius:12px}
+.landing-hero .xl-discovery-right .xl-graphic-card{flex-direction:column;align-items:flex-start;justify-content:flex-start}
+.landing-hero .xl-graphic-card strong{font-size:clamp(13px,1.3vw,18px);line-height:1.3;overflow-wrap:anywhere}
+.landing-hero .xl-graphic-card p{font-size:clamp(11px,1vw,13px);line-height:1.45;margin-top:6px}
+.landing-hero .xl-graphic-symbol{width:30px;height:30px}
+.landing-connected .xl-connected-tree{padding:20px 13px 23px}
+.landing-connected .xl-tree-single{width:92%}
+.landing-connected .xl-tree-step{gap:9px;padding:11px;min-height:67px;border-radius:11px}
+.landing-connected .xl-tree-step-icon{width:33px;height:33px;border-radius:8px}
+.landing-connected .xl-tree-step-icon svg{width:21px;height:21px}
+.landing-connected .xl-tree-label{font-size:10px;line-height:1.3;margin-bottom:4px}
+.landing-connected .xl-tree-step strong{font-size:clamp(12px,1.18vw,16px);line-height:1.34;overflow-wrap:anywhere}
+.landing-connected .xl-tree-step p{font-size:11px;line-height:1.45;margin-top:6px}
+.landing-connected .xl-tree-stem{height:23px}
+.landing-connected .xl-tree-fork-connector{height:20px;margin-top:22px}
+.landing-connected .xl-tree-fork-connector:before{top:-22px;height:22px}
+.landing-connected .xl-tree-branches{gap:9px}
+.landing-connected .xl-tree-branches .xl-tree-step{flex-direction:column;align-items:flex-start}
+.landing-connected .xl-tree-merge{height:20px;margin-bottom:21px}
+.landing-connected .xl-tree-merge:after{height:21px;bottom:-21px}
+.landing-connected .xl-tree-ai{gap:10px;padding:13px;border-radius:11px}
+.landing-connected .xl-tree-ai-icon{width:36px;height:36px}
+.landing-connected .xl-tree-ai-icon svg{width:26px;height:26px}
+.landing-connected .xl-tree-ai>div span{font-size:11px}
+.landing-connected .xl-tree-ai strong{font-size:clamp(13px,1.3vw,17px);line-height:1.35;overflow-wrap:anywhere}
+@media(max-width:960px){
+ .landing-hero,.landing-connected{grid-template-columns:minmax(0,1fr);gap:28px;align-items:stretch}
+ .landing-hero{padding:36px 0 55px}
+ .landing-hero h1{font-size:clamp(36px,7vw,50px)}
+ .landing-hero>.xl-discovery,.landing-connected>.xl-connected-tree{max-width:700px;width:100%;margin-inline:auto}
+ .landing-connected .landing-section-heading{max-width:700px;margin-inline:auto}
+ .landing-hero .xl-graphic-card strong{font-size:clamp(14px,2.5vw,19px)}
+ .landing-hero .xl-graphic-card p{font-size:clamp(12px,1.7vw,14px)}
+ .landing-connected .xl-tree-step strong{font-size:clamp(13px,2.3vw,18px)}
+}
+@media(max-width:550px){
+ .landing-hero .xl-discovery-right{grid-template-columns:minmax(0,1fr);padding-left:8%}
+ .landing-hero .xl-discovery-right .xl-graphic-card{flex-direction:row;align-items:center}
+ .landing-connected .xl-tree-branches{grid-template-columns:minmax(0,1fr)}
+ .landing-connected .xl-tree-branches .xl-tree-step{flex-direction:row;align-items:center}
+ .landing-hero h1{font-size:clamp(33px,8.3vw,44px)}
+}

@@ -57,7 +57,7 @@ export default function LandingPage() {
    </section>
 
    <section className="landing-section landing-connected" id="como-funciona" aria-labelledby="connected-heading">
-    <div className="landing-section-heading landing-centered-heading">
+    <div className="landing-section-heading">
      <h2 id="connected-heading">Un espacio donde <span>todo vive conectado.</span></h2>
      <p>Problemas, oportunidades, hipótesis, investigación, experimentos, resultados y aprendizaje colectivo. Cada prueba, investigación y resultados quedan atados a lo que querías comprobar y a lo que ocurrió. Deja de guiarte por opiniones e intuición y acércate a la verdad del mercado más rápidamente.</p>
     </div>
