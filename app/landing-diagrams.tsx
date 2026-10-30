@@ -1,4 +1,5 @@
 import { ArrowLeft, CheckCircle2, FlaskConical, Lightbulb, MessageCircleMore, Microscope, Search, AlertCircle } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { AIBrainIcon } from './ai-brain-icon';
 
 /** Responsive, accessible vector diagrams, matching the approved landing references.
@@ -48,7 +49,7 @@ export function ScatteredKnowledgeBanner(){
 }
 
 function TreeStep({type,heading,body,description,icon}:{
- type:string;heading:string;body?:string;description?:string;icon:React.ReactNode
+ type:string;heading:string;body?:string;description?:string;icon:ReactNode
 }){
  return <div className={`xl-graphic-card xl-tree-step xl-tree-${type}`}>
    <span className="xl-tree-step-icon">{icon}</span>
